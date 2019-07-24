@@ -7,7 +7,6 @@
   export let accessToken = 'its-me';
   export let tableId = 1;
   
-  
   let socket
   let log = [];
   let connected = false;
@@ -15,6 +14,7 @@
   let chatMessage = '';
   let isMyTurn = false;
   let sittingAtTable = false;
+  let connectionString = ''
   let tableState = {
     // players: []
     players: [{name: 'poopsy'}, {name: 'retard'}],
@@ -32,10 +32,10 @@
   onMount(connect)
 
   function connect() {
-    let url = `${$gameServer}?access_token=${accessToken}&table_id=${tableId}`
+    connectionString = `${$gameServer}?access_token=${accessToken}&table_id=${tableId}`
 
     connecting = true
-    socket = new WebSocket(url);
+    socket = new WebSocket(connectionString);
 
     socket.onopen = () => {
       connected = true 
@@ -86,13 +86,6 @@
   function buyIn() {}
   function sendChat() {}
 
-onMount(() => {
-    console.log('hello')
-  })
-
-onDestroy(() => {
-  console.log('bye')
-})
 </script>
 
 <style>
@@ -117,7 +110,7 @@ onDestroy(() => {
         {#if !connecting}
           <span>NOT CONNECTED</span>
         {:else}
-          <span>Connecting... Please wait.</span>
+          <span>Connecting to {connectionString}... Please wait.</span>
         {/if}
       </div>
       <hr>
