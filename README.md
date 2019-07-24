@@ -1,4 +1,4 @@
-# Table viewer
+# Table viewer [![Deploy to now](https://deploy.now.sh/static/button.svg)](https://deploy.now.sh/?repo=https://github.com/buka-gaming/viewer)
 
 This is a web-based table viewer for Buka. Buka is creating the world's most amazing poker community.
 
