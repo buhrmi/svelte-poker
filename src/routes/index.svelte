@@ -1,10 +1,12 @@
 <script>
+  import { user } from 'stores';
+  
   import Chips from './chips.svelte';
   import { onDestroy } from 'svelte';
   import { onMount } from 'svelte';
   import { gameServer } from 'settings';
 
-  export let accessToken = 'its-me';
+  export let accessToken = $user.access_token;
   export let tableId = 1;
   
   let socket

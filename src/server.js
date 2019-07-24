@@ -8,7 +8,8 @@ const dev = NODE_ENV === 'development';
 
 function authenticate(req, res, next) {
 	req.user = {
-		id: 1
+		id: 1,
+		access_token: 'user-1-token'
 	}
 	next()
 }
