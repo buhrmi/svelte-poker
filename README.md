@@ -5,8 +5,8 @@ This is a web-based table viewer for Buka. Buka is creating the world's most ama
 ## How to run
 
 ```bash
-npx degit "buka/web" buka-web
-cd buka-web
+npx degit "buka-gaming/viewer" viewer
+cd viewer
 npm install # or yarn!
 npm run dev
 ```
