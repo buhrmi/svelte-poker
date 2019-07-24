@@ -12,7 +12,7 @@
 
 <h1>Welcome to the world of Buka</h1>
 
-<p>With the Buka protocol you can plug right into our games.</p>
+<p>Buka is building the world's most amazing poker community. And with the <a href="https://github.com/buka-gaming/spec" target="_blank">Buka protocol</a>, you can plug right into our games.</p>
 
 <h2>Buka Protocol</h2>
 
@@ -28,3 +28,5 @@
 	Establish a websocket connection to <pre>{$gameServer}?table_id=[tableId]&access_token=[yourAccessToken]</pre> where access token is an access token belonging to your user id.
 </li>
 </ul>
+
+<p>For more information, check out our <a href="https://github.com/buka-gaming/spec" target="_blank">Protocol Specification</a>.</p>
