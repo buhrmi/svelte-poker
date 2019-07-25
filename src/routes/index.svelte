@@ -14,6 +14,7 @@
   let connected = false;
   let connecting = false
   let chatMessage = '';
+  let logMessages = []
   let isMyTurn = false;
   let sittingAtTable = false;
   let connectionString = ''
@@ -57,7 +58,7 @@
     }
 
     socket.onmessage = (event) => {
-      console.log(`Data received: ${event.data}`);
+      logMessages = logMessages.push(`Data received: ${event.data}`);
       var data = JSON.parse(event.data)
       if (data.tableState) {
         tableState = data.tableState
@@ -83,10 +84,14 @@
     };
   }
 
-  let demo = setInterval((() => tableState.pot = Math.floor(Math.random() * 100000)), 100)
+  // let demo = setInterval((() => tableState.pot = Math.floor(Math.random() * 100000)), 100)
 
   function buyIn() {}
-  function sendChat() {}
+
+  function sendChat() {
+    socket.send(JSON.stringify({command: 'chat', message: chatMessage}))
+    chatMessage = '';
+  }
 
 </script>
 
@@ -100,7 +105,7 @@
 
     {#if !connected}
       <div class="connection">
-        <p>Please connect to a <a href="/about">Buka</a>-compatible game server</p>
+        <p>Please connect to a <a href="https://github.com/buka-gaming/server">Buka game server</a></p>
         Server:
         <input bind:value={$gameServer}><br>
         Access Token:
@@ -108,15 +113,17 @@
 		    Table ID:
         <input bind:value={tableId}><br>
 
-        <button on:click={connect}>Connect</button>
+        <button on:click={connect}>Connect</button><br>
         {#if !connecting}
           <span>NOT CONNECTED</span>
         {:else}
           <span>Connecting to {connectionString}... Please wait.</span>
         {/if}
       </div>
-      <hr>
+    {:else}
+      <span>Connected to {connectionString}</span>
     {/if}
+    <hr>
     
     {#each tableState.players as player, index}
       <div class="player player_{index}">
@@ -157,6 +164,9 @@
     
     <div class="chat">
       <h2>Log</h2>
+      {#each logMessages as log}
+        <p>{log}</p>
+      {/each}
       <input bind:value={chatMessage}><button on:click={sendChat}>Send</button>
     </div>
   </div>

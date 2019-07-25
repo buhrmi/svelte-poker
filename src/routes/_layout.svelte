@@ -16,10 +16,5 @@
 </script>
 
 <main>
-  {#if $user }
-    Your user ID: { $user.id }
-  {:else}
-    Not logged in
-  {/if}
   <slot></slot>
 </main>
