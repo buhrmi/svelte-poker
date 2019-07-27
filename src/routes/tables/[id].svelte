@@ -1,16 +1,18 @@
 <script>
-  import { user } from 'stores';
-  
-  import Chips from './chips.svelte';
+  import Chips from '../../components/chips.svelte';
   import { onDestroy } from 'svelte';
   import { onMount } from 'svelte';
   import { gameServer } from 'settings';
 
-  export let accessToken = $user.access_token;
-  export let tableId = 1;
+  import { stores } from '@sapper/app';
+  let { session, page } = stores();
+
+  export let accessToken = $page.query.access_token || $session.access_token;
+  export let tableId = $page.params.id;
   
   let socket
   let log = [];
+  let sidebarOpened = false;
   let connected = false;
   let connecting = false
   let chatMessage = '';
@@ -95,35 +97,115 @@
 
 </script>
 
-<style>
+<style type="text/sass">
+.game {
+  //display: grid;
+  width: 100%;
+  height: 100%;
+  
+}
+.sidebar, .table {
+  height: 100%;
+}
+.table {
+  background: url('/felt.jpg');
+	background-size: 100% 100%;
+  transition: all 0.3s;
+}
 
+.sidebar {
+  z-index: 500;
+  word-wrap: break-word;
+  position: fixed;
+
+  transform: translateX(-100%);
+  transition: all 0.3s;
+  background: rgb(36, 37, 42);
+  input {
+    max-width: 100%;
+  }
+}
+.sidebar-opened .sidebar {
+  transform: translateX(0%);
+}
+.hamburger {
+  position: fixed;
+  top: 0;
+  z-index: 1;
+}
+.board {
+  .card {
+    margin-right: 1px;
+    width: 15%;
+  }
+}
+// Narrow styling
+@media screen and (max-width: 520px) {
+  .sidebar {
+    width: 100%;
+  }
+}
+// Wide styling
+@media screen and (min-width: 521px) {
+  .sidebar {
+    width: 40%;
+  }
+  .sidebar-opened .table {
+    margin-left: 40%;
+  }
+}
+.status {
+  position: absolute;
+  top: 7px;
+  left: 42px;
+  right: 0;
+}
 </style>
 
+<div class="hamburger hamburger--3dx" class:is-active={sidebarOpened} on:click={() => sidebarOpened = !sidebarOpened}>
+  <div class="hamburger-box">
+    <div class="hamburger-inner"></div>
+  </div>
+</div>
+<div class="status">
+  {#if !connecting}
+    <span>Coldn't connect to the server 😢</span>
+    
+  {:else if !connected}
+    <span>Connecting to {connectionString}... Please wait.</span>
+  {:else}
+    <span>Connected to {connectionString}</span>
+  {/if}
+</div>
 
-<div class="table-container">
-  <div id="table">
+<div class="game" class:sidebar-opened={sidebarOpened}>
 
+  <div class="sidebar">
+    
     {#if !connected}
       <div class="connection">
+        
         <p>Please connect to a <a href="https://github.com/buka-gaming/server">Buka game server</a></p>
         Server:
         <input bind:value={$gameServer}><br>
         Access Token:
         <input bind:value={accessToken}><br>
-		    Table ID:
+        Table ID:
         <input bind:value={tableId}><br>
 
         <button on:click={connect}>Connect</button><br>
-        {#if !connecting}
-          <span>NOT CONNECTED</span>
-        {:else}
-          <span>Connecting to {connectionString}... Please wait.</span>
-        {/if}
       </div>
-    {:else}
-      <span>Connected to {connectionString}</span>
+      <hr>
     {/if}
-    <hr>
+
+    <h2>Log</h2>
+    {#each logMessages as log}
+      <p>{log}</p>
+    {/each}
+    <input bind:value={chatMessage}><button on:click={sendChat}>Send</button>
+  
+  </div>
+  <div class="table">
     
     {#each tableState.players as player, index}
       <div class="player player_{index}">
@@ -149,7 +231,7 @@
 
     <div class="board">
       {#each tableState.board as card}
-        <img src="/cards/{card[0]}{card[1]}.png" class="playing_card" alt="{card[0]}{card[1]}">
+        <img src="/cards/{card[0]}{card[1]}.png" class="card" alt="{card[0]}{card[1]}">
       {/each}
     </div>
     
@@ -162,12 +244,6 @@
     <button class="button large">Call</button>
     <button class="button large">Raise</button>
     
-    <div class="chat">
-      <h2>Log</h2>
-      {#each logMessages as log}
-        <p>{log}</p>
-      {/each}
-      <input bind:value={chatMessage}><button on:click={sendChat}>Send</button>
-    </div>
+    
   </div>
 </div>

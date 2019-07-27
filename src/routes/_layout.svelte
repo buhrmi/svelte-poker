@@ -7,14 +7,18 @@
 </script>
 
 <script>
-  import { user } from 'stores';
+  import { stores } from '@sapper/app';
+  let { session } = stores();
 
-  export let session;
   export let segment;
-
-  $user = session.user;
 </script>
 
-<main>
-  <slot></slot>
-</main>
+
+<style>
+nav {
+  height: 35px;
+  background: #101016;
+}
+</style>
+<nav></nav>
+<slot></slot>

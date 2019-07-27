@@ -1,11 +1,12 @@
 import sirv from 'sirv';
 import polka from 'polka';
+import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import * as sapper from '@sapper/server';
 
 import { Pool } from 'pg';
 const pool = new Pool({
-  connectionString: 'postgres://localhost:5432/buhrmi',
+  connectionString: 'postgres://buka-db.dyndns.org:5432/buhrmi',
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
@@ -33,12 +34,12 @@ async function setDatabaseClientForRequest(req, res, next) {
 }
 
 async function authenticate(req, res, next) {
-	// let query = "SELECT user.id from users LEFT JOIN access_tokens ON users.id = access_tokens.user_id WHERE access_tokens.token = ?"
-	// let result = await req.db.query(query)
-	// console.log(result)
+	let accessToken = req.cookies.access_token;
+	let query = "SELECT users.id, users.name from users LEFT JOIN access_tokens ON users.id = access_tokens.user_id WHERE access_tokens.token = $1"
+	let result = await req.db.query(query, [accessToken])
+	console.log(result)
 	req.user = {
-		id: 1,
-		access_token: 'user-1-token'
+		id: 1 
 	}
 	next()
 }
@@ -47,8 +48,9 @@ polka() // You can also use Express
 	.use(
 		compression({ threshold: 0 }),
 		sirv('static', { dev }),
-		setDatabaseClientForRequest,
-		authenticate,
+		cookieParser(),
+		// setDatabaseClientForRequest,
+		// authenticate,
 		sapper.middleware({
 			session: (req, res) => ({
 				user: req.user
