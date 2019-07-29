@@ -33,16 +33,6 @@ async function setDatabaseClientForRequest(req, res, next) {
 
 }
 
-async function authenticate(req, res, next) {
-	let accessToken = req.cookies.access_token;
-	let query = "SELECT users.id, users.name from users LEFT JOIN access_tokens ON users.id = access_tokens.user_id WHERE access_tokens.token = $1"
-	let result = await req.db.query(query, [accessToken])
-	console.log(result)
-	req.user = {
-		id: 1 
-	}
-	next()
-}
 
 polka() // You can also use Express
 	.use(
@@ -53,7 +43,7 @@ polka() // You can also use Express
 		// authenticate,
 		sapper.middleware({
 			session: (req, res) => ({
-				user: req.user
+				access_token: req.cookies.access_token
 			})
 		})
 	)

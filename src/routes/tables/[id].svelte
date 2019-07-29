@@ -48,7 +48,7 @@
       isMyTurn = true;
       sittingAtTable = true;
       
-      clearInterval(demo);
+      // clearInterval(demo);
       tableState = {
         players: [],
         board: [],
@@ -99,18 +99,17 @@
 
 <style type="text/sass">
 .game {
-  //display: grid;
   width: 100%;
-  height: 100%;
-  
+  height: calc(100% - 35px);
+  background: url('/felt.png');
 }
 .sidebar, .table {
   height: 100%;
 }
 .table {
-  background: url('/felt.jpg');
-	background-size: 100% 100%;
+  position: relative;
   transition: all 0.3s;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.1) 70%,rgba(0,0,0,0.3) 100%);
 }
 
 .sidebar {
@@ -133,10 +132,34 @@
   top: 0;
   z-index: 1;
 }
-.board {
-  .card {
-    margin-right: 1px;
-    width: 15%;
+.player {
+  position: absolute;
+  &.player_0 {
+    top: 50%;
+    left: 10%;
+  }
+  &.player_1 {
+    top: 15%;
+    left: 10%;
+  }
+}
+.middle {
+  text-align: center;
+  position: absolute;
+  top: 30%;
+  left: 25%;
+  right: 25%;
+  .board {
+    .card {
+      margin-right: 4px;
+      width: calc(16% - 4px);
+      display: inline-block;
+    }
+  }
+  .pot {
+  }
+  .commands {
+
   }
 }
 // Narrow styling
@@ -169,12 +192,12 @@
 </div>
 <div class="status">
   {#if !connecting}
-    <span>Coldn't connect to the server 😢</span>
+    <span>Couldn't connect to the server 😢</span>
     
   {:else if !connected}
-    <span>Connecting to {connectionString}... Please wait.</span>
+    <span>Connecting... Please wait ⌛</span>
   {:else}
-    <span>Connected to {connectionString}</span>
+    <span>Connected 🤗</span>
   {/if}
 </div>
 
@@ -221,29 +244,28 @@
           {player.name}
         </div>
         <div class="bet">
-          Bet: {(player.bet || 0)} Satoshi
+          Bet: <Chips amount={player.bet || 16}></Chips>
         </div>
         {#if tableState.button == index} 
           <span>DEALER</span>
         {/if}
       </div>
     {/each}
-
-    <div class="board">
-      {#each tableState.board as card}
-        <img src="/cards/{card[0]}{card[1]}.png" class="card" alt="{card[0]}{card[1]}">
-      {/each}
+    <div class="middle">
+      <div class="board">
+        {#each tableState.board as card}<img src="/cards/{card[0]}{card[1]}.png" class="card" alt="{card[0]}{card[1]}">{/each}{#each Array(5 - tableState.board.length) as _}<img src="/cards/empty.png" class="card placeholder" alt="Placeholder">{/each}
+        <div class="pot">
+          <Chips amount={tableState.pot}></Chips>
+          <p>Pot: {Number(tableState.pot).toLocaleString()} Satoshi</p>
+        </div>
+      </div>
+      <div class="commands">
+        <button class="button large">Fold</button>
+        <button class="button large">Call</button>
+        <button class="button large">Raise</button>
+      </div>
     </div>
-    
-    <div class="pot">
-      <Chips amount={tableState.pot}></Chips>
-      <p>Pot: {Number(tableState.pot).toLocaleString()} Satoshi</p>
-    </div>
 
-    <button class="button large">Fold</button>
-    <button class="button large">Call</button>
-    <button class="button large">Raise</button>
-    
     
   </div>
 </div>
