@@ -3,7 +3,7 @@
   import { onDestroy } from 'svelte';
   import { onMount } from 'svelte';
   import { gameServer } from 'settings';
-
+  import { player } from '../_stores';
   import { stores } from '@sapper/app';
   let { session, page } = stores();
 
@@ -17,27 +17,47 @@
   let connecting = false
   let chatMessage = '';
   let logMessages = []
-  let isMyTurn = false;
-  let sittingAtTable = false;
+  
   let connectionString = ''
   let tableState = {
-    // players: []
-    players: [{name: 'poopsy'}, {name: 'retard'}],
-    board: ['as', 'kh', '2c', '4d'],
-    pot: 46340,
-    buy_in: 500,
-    sb: 25,
-    bb: 50
-  }
-  
-  $: {
-    isMyTurn = true
+    seat_count: 0,
+    seats: [],
+    board: [],
+    pot: 0
   }
 
   onMount(connect)
+  function seat(index) {
+    if (tableState.seats[index] && tableState.seats[index].seat_state != 'Empty') {
+      return tableState.seats[index]
+    }
+    else return null
+  }
+
+  function mySeatIndex() {
+    if (!$player) return null
+    for (let index = 0; index < tableState.seats.length; index++) {
+      const element = tableState.seats[index];
+      if (element.player_id == $player.id) return index
+    }
+    return null
+  }
+
+  function sitting() {
+    return mySeatIndex() !== null;
+  }
+
+  function sitDown(index) {
+    socket.send(JSON.stringify({msg: "sit-down", seat: index}))
+  }
+
+  function standUp() {
+    socket.send(JSON.stringify({msg: "stand-up"}))
+  }
 
   function connect() {
-    connectionString = `${$gameServer}?access_token=${accessToken}&table_id=${tableId}`
+    connectionString = `${$gameServer}?table_id=${tableId}`
+    if (accessToken) connectionString += `&access_token=${accessToken}`
 
     connecting = true
     socket = new WebSocket(connectionString);
@@ -45,26 +65,16 @@
     socket.onopen = () => {
       connected = true 
       connecting = false
-      isMyTurn = true;
-      sittingAtTable = true;
-      
-      // clearInterval(demo);
-      tableState = {
-        players: [],
-        board: [],
-        pot: 0,
-        buy_in: 0,
-        sb: 0,
-        bb: 0
-      }
     }
 
     socket.onmessage = (event) => {
-      logMessages = logMessages.push(`Data received: ${event.data}`);
+      logMessages.push(`Data received: ${event.data}`);
+      logMessages = logMessages
       var data = JSON.parse(event.data)
-      if (data.tableState) {
-        tableState = data.tableState
-      }
+      console.log(data)
+      if (data.seats) tableState.seats = data.seats
+      if (data.seat_count) tableState.seat_count = data.seat_count
+      if (data.poker_variant) tableState.poker_variant = data.poker_variant
     };
 
     socket.onclose = (event) => {
@@ -146,13 +156,16 @@
 .middle {
   text-align: center;
   position: absolute;
+  width: 100%;
   top: 30%;
-  left: 25%;
-  right: 25%;
   .board {
+    width: 100%;
+    display: inline-block;
     .card {
       margin-right: 4px;
-      width: calc(16% - 4px);
+      max-width: 120px;
+      width: calc(14%);
+      min-width: 40px;
       display: inline-block;
     }
   }
@@ -191,13 +204,12 @@
   </div>
 </div>
 <div class="status">
-  {#if !connecting}
-    <span>Couldn't connect to the server 😢</span>
-    
-  {:else if !connected}
+  {#if connected}
+    <span>{tableState.poker_variant} 🤗</span>
+  {:else if connecting}
     <span>Connecting... Please wait ⌛</span>
   {:else}
-    <span>Connected 🤗</span>
+    <span>Not connected 😢</span>
   {/if}
 </div>
 
@@ -229,25 +241,19 @@
   
   </div>
   <div class="table">
-    
-    {#each tableState.players as player, index}
-      <div class="player player_{index}">
-        <div class="hand">
-          <div class="card1">
-            <div class="playing_card back"><div class="card_back"></div></div>
-          </div>
-          <div class="card2">
-            <div class="playing_card back"><div class="card_back"></div></div>
-          </div>
-        </div>
-        <div class="name">
-          {player.name}
-        </div>
-        <div class="bet">
-          Bet: <Chips amount={player.bet || 16}></Chips>
-        </div>
-        {#if tableState.button == index} 
-          <span>DEALER</span>
+    {#each Array(tableState.seat_count) as _, index}
+      <div class="seat seat_{index}">
+        Seat {index}
+        {#if seat(index)}
+          Player: {seat(index).nick}
+          {#if $player && seat(index).player_id == $player.id}
+            <button on:click={() => standUp()}>Stand Up</button>
+          {/if}
+        {:else}
+          Empty. 
+          {#if !sitting()}
+            <button on:click={() => sitDown(index)}>Sit here 😊</button>
+          {/if}
         {/if}
       </div>
     {/each}

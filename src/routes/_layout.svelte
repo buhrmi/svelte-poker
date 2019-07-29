@@ -1,7 +1,7 @@
 <script context="module">
   let count = 1
   export async function preload(page, session) {
-    let player = null
+    let playerData = null
     try {
       let url = process.env.APEX_URL+'/me.json'
       const res = await this.fetch(url, {
@@ -10,21 +10,26 @@
           Authorization: session.access_token
         }
       })
-      player = await res.json()
+      playerData = await res.json()
     }
     catch (e) {
       console.log(e.error)
     }
 
-	  return { player }
+	  return { playerData }
 	}
 </script>
 
 <script>
-  import { stores } from '@sapper/app';
-  let { session } = stores();
-  export let player;
+  export let playerData;
   export let segment;
+
+  import { stores } from '@sapper/app';
+  import { player } from './_stores.js';
+  
+  $player = playerData;
+  
+  let { session } = stores();
 </script>
 
 
@@ -42,8 +47,8 @@ nav {
 </style>
 <nav>
 <div class="player">
-{#if player}
-{player.nick}
+{#if $player}
+{$player.nick}
 {:else}
 <a href={process.env.APEX_URL}>Sign up / Log In</a>
 {/if}
