@@ -1,8 +1,6 @@
 <script>
   import Chips from '../../components/chips.svelte';
-  import { onDestroy } from 'svelte';
-  import { onMount } from 'svelte';
-  import { gameServer } from 'settings';
+  import { onDestroy, tick, onMount } from 'svelte';
   import { player } from '../_stores';
   import { stores } from '@sapper/app';
   let { session, page } = stores();
@@ -16,8 +14,10 @@
   let connected = false;
   let connecting = false
   let chatMessage = '';
+  let gameServer = 'ws://buka-benj.dyndns.org:3000'
   let logMessages = []
-  
+  let chatInput
+  let historyDiv
   let connectionString = ''
   let tableState = {
     seat_count: 0,
@@ -27,6 +27,27 @@
   }
 
   onMount(connect)
+  let time;
+  setInterval(function() {time = new Date(),1000})
+  function getTime() { return time}
+
+
+  async function fetchPlayer(playerId) {
+    const res = await fetch(process.env.APEX_URL+`/players/${playerId}.json`)
+    const json = await res.json()
+    cachedPlayerData[playerId] = json
+    cachedPlayerData = cachedPlayerData;
+  }
+  
+  let cachedPlayerData = {}
+  function playerData(playerId) {
+    if (cachedPlayerData[playerId]) return cachedPlayerData[playerId];
+    fetchPlayer(playerId)
+    return {
+      nick: 'Loading...'
+    }
+  }
+
   function seat(index) {
     if (tableState.seats[index] && tableState.seats[index].seat_state != 'Empty') {
       return tableState.seats[index]
@@ -56,7 +77,7 @@
   }
 
   function connect() {
-    connectionString = `${$gameServer}?table_id=${tableId}`
+    connectionString = `${gameServer}?table_id=${tableId}`
     if (accessToken) connectionString += `&access_token=${accessToken}`
 
     connecting = true
@@ -68,13 +89,17 @@
     }
 
     socket.onmessage = (event) => {
-      logMessages.push(`Data received: ${event.data}`);
-      logMessages = logMessages
       var data = JSON.parse(event.data)
       console.log(data)
       if (data.seats) tableState.seats = data.seats
       if (data.seat_count) tableState.seat_count = data.seat_count
       if (data.poker_variant) tableState.poker_variant = data.poker_variant
+
+      if (data.msg == "chat") {
+        logMessages.push(data)
+        logMessages = logMessages
+        tick().then(() => historyDiv.scrollTop = historyDiv.scrollHeight);
+      }
     };
 
     socket.onclose = (event) => {
@@ -101,7 +126,8 @@
   function buyIn() {}
 
   function sendChat() {
-    socket.send(JSON.stringify({command: 'chat', message: chatMessage}))
+    socket.send(JSON.stringify({msg: 'chat', text: chatMessage}))
+    logMessages = logMessages
     chatMessage = '';
   }
 
@@ -142,15 +168,31 @@
   top: 0;
   z-index: 1;
 }
-.player {
+.seat {
   position: absolute;
-  &.player_0 {
-    top: 50%;
-    left: 10%;
-  }
-  &.player_1 {
+  &.seat_0 {
     top: 15%;
-    left: 10%;
+    left: 5%;
+  }
+  &.seat_1 {
+    top: 5%;
+    left: 37%;
+  }
+  &.seat_2 {
+    top: 15%;
+    left: 70%;
+  }
+  &.seat_3 {
+    top: 55%;
+    left: 70%;
+  }
+  &.seat_4 {
+    top: 65%;
+    left: 37%;
+  }
+  &.seat_5 {
+    top: 55%;
+    left: 5%;
   }
 }
 .middle {
@@ -170,6 +212,7 @@
     }
   }
   .pot {
+
   }
   .commands {
 
@@ -193,8 +236,57 @@
 .status {
   position: absolute;
   top: 7px;
-  left: 42px;
+  left: 34px;
   right: 0;
+}
+
+.tab_panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 22%;
+  .tab {
+    background: rgba(0,0,0,0.4);
+    display: inline-block;
+    padding: 1px 5px;
+    position: absolute;
+    top: -23px;
+  }
+  .tab_content {
+    background: rgba(0,0,0,0.4);
+    height: 100%;
+  }
+  .history {
+    height: calc(100% - 28px);
+    overflow: hidden;
+    overflow-y: scroll;
+  }
+  .chat_input {
+    width: 100%;
+    height: 28px;
+    button {
+      width: 15%;
+      min-width: 50px;
+      height: 27px;
+      border: none;
+    }
+    input {
+      height: 28px;
+      width: calc(100% - 15%);
+      max-width: calc(100% - 50px);
+      background: rgba(0, 0, 0, 0.2);
+      border: none;
+      padding: 3px;
+      border-bottom: 1px solid rgba(0, 0, 200, 0.2);
+      cursor: text;
+      color: white;
+      &:focus {
+        outline: none;
+        border-bottom: 1px solid rgba(100, 100, 255, 0.6);
+      }
+    }
+  }
 }
 </style>
 
@@ -205,7 +297,7 @@
 </div>
 <div class="status">
   {#if connected}
-    <span>{tableState.poker_variant} 🤗</span>
+    <span>{tableState.poker_variant} BTC 🤗</span>
   {:else if connecting}
     <span>Connecting... Please wait ⌛</span>
   {:else}
@@ -213,7 +305,7 @@
   {/if}
 </div>
 
-<div class="game" class:sidebar-opened={sidebarOpened}>
+<div on:keydown={e => {if (e.keyCode == 13) chatInput.focus()}} class="game" class:sidebar-opened={sidebarOpened}>
 
   <div class="sidebar">
     
@@ -222,7 +314,7 @@
         
         <p>Please connect to a <a href="https://github.com/buka-gaming/server">Buka game server</a></p>
         Server:
-        <input bind:value={$gameServer}><br>
+        <input bind:value={gameServer}><br>
         Access Token:
         <input bind:value={accessToken}><br>
         Table ID:
@@ -233,26 +325,22 @@
       <hr>
     {/if}
 
-    <h2>Log</h2>
-    {#each logMessages as log}
-      <p>{log}</p>
-    {/each}
-    <input bind:value={chatMessage}><button on:click={sendChat}>Send</button>
-  
   </div>
   <div class="table">
     {#each Array(tableState.seat_count) as _, index}
       <div class="seat seat_{index}">
-        Seat {index}
         {#if seat(index)}
-          Player: {seat(index).nick}
-          {#if $player && seat(index).player_id == $player.id}
-            <button on:click={() => standUp()}>Stand Up</button>
-          {/if}
+          <div class="player">
+            {seat(index).nick}<br>
+            {seat(index).seat_state}<br>
+            {seat(index).stack}
+            <div class="bet">
+              {seat(index).committed} <Chips amount="{seat(index).committed}"></Chips>
+            </div>
+          </div>
         {:else}
-          Empty. 
           {#if !sitting()}
-            <button on:click={() => sitDown(index)}>Sit here 😊</button>
+            <br><button on:click={() => sitDown(index)}>Sit here 😊</button>
           {/if}
         {/if}
       </div>
@@ -265,13 +353,24 @@
           <p>Pot: {Number(tableState.pot).toLocaleString()} Satoshi</p>
         </div>
       </div>
+    </div>
+    {#if sitting()}
       <div class="commands">
-        <button class="button large">Fold</button>
-        <button class="button large">Call</button>
-        <button class="button large">Raise</button>
+        <button on:click={() => standUp()}>Stand Up</button>
+      </div>
+    {/if}
+    <div class="tab_panel">
+      <div class="tab">History</div>
+      <div class="tab_content chat">
+        <div class="history" bind:this={historyDiv}>
+          {#each logMessages as log}
+            <p>{cachedPlayerData && playerData(log.from).nick}: {log.text}</p>
+          {/each}
+        </div>
+        <div class="chat_input" bind:this={chatInput}>
+          <input on:keydown={e => {if (e.keyCode == 13) sendChat()}} bind:value={chatMessage}><button on:click={sendChat}>Send</button>
+        </div>
       </div>
     </div>
-
-    
   </div>
 </div>

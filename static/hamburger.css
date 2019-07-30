@@ -23,7 +23,7 @@
     background-color: white; }
 
 .hamburger-box {
-  width: 30px;
+  width: 24px;
   height: 24px;
   display: inline-block;
   position: relative; }
@@ -33,7 +33,7 @@
   top: 50%;
   margin-top: -2px; }
   .hamburger-inner, .hamburger-inner::before, .hamburger-inner::after {
-    width: 30px;
+    width: 24px;
     height: 4px;
     background-color: white;
     border-radius: 4px;
@@ -45,9 +45,9 @@
     content: "";
     display: block; }
   .hamburger-inner::before {
-    top: -10px; }
+    top: -8px; }
   .hamburger-inner::after {
-    bottom: -10px; }
+    bottom: -8px; }
 
 /*
    * 3DX
@@ -64,9 +64,9 @@
   background-color: transparent !important;
   transform: rotateY(180deg); }
   .hamburger--3dx.is-active .hamburger-inner::before {
-    transform: translate3d(0, 10px, 0) rotate(45deg); }
+    transform: translate3d(0, 8px, 0) rotate(45deg); }
   .hamburger--3dx.is-active .hamburger-inner::after {
-    transform: translate3d(0, -10px, 0) rotate(-45deg); }
+    transform: translate3d(0, -8px, 0) rotate(-45deg); }
 
 /*
    * 3DX Reverse

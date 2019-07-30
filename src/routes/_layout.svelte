@@ -33,25 +33,37 @@
 </script>
 
 
-<style>
+<style type="text/sass">
 nav {
   height: 35px;
   background: #101016;
+  background-image: url('/border.png');
+  box-shadow: 0px 0px 5px 0px black;
+  position: relative;
 }
 .player {
   position: absolute;
   right: 0;
   padding: 6px;
   z-index: 100;
+  .profile_pic {
+    border-radius: 100px;
+    width: 25px;
+    height: 25px;
+    vertical-align: middle;
+  }
 }
 </style>
+
 <nav>
-<div class="player">
-{#if $player}
-{$player.nick}
-{:else}
-<a href={process.env.APEX_URL}>Sign up / Log In</a>
-{/if}
-</div>
+  <div class="player">
+    {#if $player}
+      {$player.nick}
+      <img src="{$player.profile_pic}" alt="" class="profile_pic">
+    {:else}
+      <a href={process.env.APEX_URL}>Sign up / Log In</a>
+    {/if}
+  </div>
 </nav>
+
 <slot></slot>
