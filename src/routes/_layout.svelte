@@ -60,6 +60,7 @@ nav {
     {#if $player}
       {$player.nick}
       <img src="{$player.profile_pic}" alt="" class="profile_pic">
+      | Balance (BTC): {$player.balances.BTC} Satoshi
     {:else}
       <a href={process.env.APEX_URL}>Sign up / Log In</a>
     {/if}

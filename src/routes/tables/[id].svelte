@@ -17,6 +17,7 @@
   let gameServer = 'ws://buka-benj.dyndns.org:3000'
   let logMessages = []
   let chatInput
+  let currency = 'BTC'
   let historyDiv
   let connectionString = ''
   let tableState = {
@@ -27,16 +28,11 @@
   }
 
   onMount(connect)
-  let time;
-  setInterval(function() {time = new Date(),1000})
-  function getTime() { return time}
-
 
   async function fetchPlayer(playerId) {
     const res = await fetch(process.env.APEX_URL+`/players/${playerId}.json`)
     const json = await res.json()
     cachedPlayerData[playerId] = json
-    cachedPlayerData = cachedPlayerData;
   }
   
   let cachedPlayerData = {}
@@ -68,8 +64,14 @@
     return mySeatIndex() !== null;
   }
 
-  function sitDown(index) {
-    socket.send(JSON.stringify({msg: "sit-down", seat: index}))
+  async function sitDown(index) {
+    await socket.send(JSON.stringify({msg: "sit-down", seat: index}))
+    await bringIn($player.balances[currency]);
+  }
+
+
+  async function bringIn(amount) {
+    await socket.send(JSON.stringify({msg: "bring-in", amount: -1000}))
   }
 
   function standUp() {
@@ -94,6 +96,13 @@
       if (data.seats) tableState.seats = data.seats
       if (data.seat_count) tableState.seat_count = data.seat_count
       if (data.poker_variant) tableState.poker_variant = data.poker_variant
+
+      if (data.echo && data.echo.message) {
+        const echoMessage = JSON.parse(data.echo.message);
+
+        if (data.echo.player_id == $player.id && echoMessage.msg == 'bring-in') player.reload()
+        if (data.echo.player_id == $player.id && echoMessage.msg == 'stand-up') player.reload()
+      }
 
       if (data.msg == "chat") {
         logMessages.push(data)
@@ -297,7 +306,7 @@
 </div>
 <div class="status">
   {#if connected}
-    <span>{tableState.poker_variant} BTC 🤗</span>
+    <span>{tableState.poker_variant} 🤗</span>
   {:else if connecting}
     <span>Connecting... Please wait ⌛</span>
   {:else}
@@ -329,13 +338,13 @@
   <div class="table">
     {#each Array(tableState.seat_count) as _, index}
       <div class="seat seat_{index}">
-        {#if seat(index)}
+        {#if tableState.seats[index] && seat(index)}
           <div class="player">
-            {seat(index).nick}<br>
-            {seat(index).seat_state}<br>
-            {seat(index).stack}
+            {tableState.seats[index].nick}<br>
+            {tableState.seats[index].seat_state}<br>
+            Stack: {tableState.seats[index].stack}
             <div class="bet">
-              {seat(index).committed} <Chips amount="{seat(index).committed}"></Chips>
+              Bet: {tableState.seats[index].committed} <Chips amount="{tableState.seats[index].committed}"></Chips>
             </div>
           </div>
         {:else}

@@ -33,7 +33,6 @@ async function setDatabaseClientForRequest(req, res, next) {
 
 }
 
-
 polka() // You can also use Express
 	.use(
 		compression({ threshold: 0 }),
