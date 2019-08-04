@@ -3,6 +3,8 @@
   import { onDestroy, tick, onMount } from 'svelte';
   import { player } from '../_stores';
   import { stores } from '@sapper/app';
+  import { fly } from 'svelte/transition';
+
   let { session, page } = stores();
 
   export let accessToken = $page.query.access_token || $session.access_token;
@@ -15,6 +17,7 @@
   let connecting = false
   let chatMessage = '';
   let gameServer = 'ws://buka-benj.dyndns.org:3000'
+  // let gameServer = 'ws://buka-db.dyndns.org:3000'
   let logMessages = []
   let chatInput
   let currency = 'BTC'
@@ -71,7 +74,7 @@
 
 
   async function bringIn(amount) {
-    await socket.send(JSON.stringify({msg: "bring-in", amount: -1000}))
+    await socket.send(JSON.stringify({msg: "bring-in", amount}))
   }
 
   function standUp() {
@@ -202,6 +205,10 @@
   &.seat_5 {
     top: 55%;
     left: 5%;
+  }
+  .player {
+    width: 200px;
+    position: absolute;
   }
 }
 .middle {
@@ -339,7 +346,7 @@
     {#each Array(tableState.seat_count) as _, index}
       <div class="seat seat_{index}">
         {#if tableState.seats[index] && seat(index)}
-          <div class="player">
+          <div class="player" transition:fly="{{ y: -15, duration: 350 }}">
             {tableState.seats[index].nick}<br>
             {tableState.seats[index].seat_state}<br>
             Stack: {tableState.seats[index].stack}
