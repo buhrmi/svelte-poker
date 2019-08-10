@@ -8,7 +8,7 @@ import pkg from './package.json';
 import { sass } from "svelte-preprocess-sass";
 
 const mode = process.env.NODE_ENV;
-const apex = process.env.APEX_URL || 'http://buka-buhrmi.dyndns.org'
+const api = process.env.API_URL || 'http://buka-buhrmi.dyndns.org'
 const dev = mode === 'development';
 
 const onwarn = (warning, onwarn) => (warning.code === 'CIRCULAR_DEPENDENCY' && /[/\\]@sapper[/\\]/.test(warning.message)) || onwarn(warning);
@@ -22,7 +22,7 @@ export default {
 			replace({
 				'process.browser': true,
 				'process.env.NODE_ENV': JSON.stringify(mode),
-				'process.env.APEX_URL': JSON.stringify(apex)
+				'process.env.API_URL': JSON.stringify(api)
 			}),
 			svelte({
 				dev,
@@ -53,7 +53,7 @@ export default {
 			replace({
 				'process.browser': false,
 				'process.env.NODE_ENV': JSON.stringify(mode),
-				'process.env.APEX_URL': JSON.stringify(apex)
+				'process.env.API_URL': JSON.stringify(api)
 			}),
 			svelte({
 				generate: 'ssr',

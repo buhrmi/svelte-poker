@@ -3,7 +3,7 @@ import {writable} from 'svelte/store';
 const player = writable({})
 
 player.reload = async function() {
-  let url = process.env.APEX_URL+'/me.json'
+  let url = process.env.API_URL+'/me.json'
   const res = await fetch(url, {
     credentials: 'include'
   })

@@ -3,7 +3,7 @@
   export async function preload(page, session) {
     let playerData = null
     try {
-      let url = process.env.APEX_URL+'/me.json'
+      let url = process.env.API_URL+'/me.json'
       const res = await this.fetch(url, {
         credentials: 'include',
         headers: {
@@ -40,8 +40,10 @@ nav {
   background-image: url('/border.png');
   box-shadow: 0px 0px 5px 0px black;
   position: relative;
+  z-index: 501;
 }
 .player {
+  
   position: absolute;
   right: 0;
   padding: 6px;
@@ -62,7 +64,7 @@ nav {
       <img src="{$player.profile_pic}" alt="" class="profile_pic">
       | Balance (BTC): {$player.balances.BTC} Satoshi
     {:else}
-      <a href={process.env.APEX_URL}>Sign up / Log In</a>
+      <a href={process.env.API_URL}>Sign up / Log In</a>
     {/if}
   </div>
 </nav>

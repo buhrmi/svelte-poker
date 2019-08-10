@@ -12,10 +12,11 @@
   
   let socket
   let log = [];
-  let sidebarOpened = false;
+  let sidebarOpened = true;
   let connected = false;
   let connecting = false
   let chatMessage = '';
+  let tab = 'chat';
   let gameServer = 'ws://buka-benj.dyndns.org:3000'
   // let gameServer = 'ws://buka-db.dyndns.org:3000'
   let logMessages = []
@@ -24,16 +25,24 @@
   let historyDiv
   let connectionString = ''
   let tableState = {
-    seat_count: 0,
-    seats: [],
+    seat_count: 1,
+    seats: [{
+      "seat_state": 0,
+      "nick": "",
+      "player_id": 1,
+      "stack": 0,
+      "committed": 0
+    }],
     board: [],
-    pot: 0
+    pot: 0,
+    acting_player: 0
   }
 
   onMount(connect)
 
   async function fetchPlayer(playerId) {
-    const res = await fetch(process.env.APEX_URL+`/players/${playerId}.json`)
+    if (typeof window === 'undefined') return
+    const res = await fetch(process.env.API_URL+`/players/${playerId}.json`)
     const json = await res.json()
     cachedPlayerData[playerId] = json
   }
@@ -135,7 +144,9 @@
 
   // let demo = setInterval((() => tableState.pot = Math.floor(Math.random() * 100000)), 100)
 
-  function buyIn() {}
+  function fold() {}
+  function check() {}
+  function raise() {}
 
   function sendChat() {
     socket.send(JSON.stringify({msg: 'chat', text: chatMessage}))
@@ -147,6 +158,7 @@
 
 <style type="text/sass">
 .game {
+  position: relative;
   width: 100%;
   height: calc(100% - 35px);
   background: url('/felt.png');
@@ -159,15 +171,22 @@
   transition: all 0.3s;
   background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.1) 70%,rgba(0,0,0,0.3) 100%);
 }
-
+.commands {
+  position: absolute;
+  bottom: 20%;
+  text-align: center;
+}
 .sidebar {
   z-index: 500;
   word-wrap: break-word;
+  padding: 8px;
+  box-shadow: 0px 0px 5px 0px black;
   position: fixed;
-
-  transform: translateX(-100%);
+  right: 0;
+  transform: translateX(100%);
   transition: all 0.3s;
   background: rgb(36, 37, 42);
+  background-image: url('/wood.png');
   input {
     max-width: 100%;
   }
@@ -176,9 +195,10 @@
   transform: translateX(0%);
 }
 .hamburger {
-  position: fixed;
+  position: absolute;
   top: 0;
-  z-index: 1;
+  right: 0;
+  z-index: 501;
 }
 .seat {
   position: absolute;
@@ -207,8 +227,13 @@
     left: 5%;
   }
   .player {
+    text-align: center;
     width: 200px;
     position: absolute;
+  }
+  .profile_pic {
+    width: 40px;
+    border-radius: 100px;
   }
 }
 .middle {
@@ -243,17 +268,18 @@
 // Wide styling
 @media screen and (min-width: 521px) {
   .sidebar {
-    width: 40%;
+    width: 320px;
   }
   .sidebar-opened .table {
-    margin-left: 40%;
+    margin-right: 320px;
   }
 }
 .status {
   position: absolute;
   top: 7px;
-  left: 34px;
+  left: 7px;
   right: 0;
+  z-index: 502;
 }
 
 .tab_panel {
@@ -261,20 +287,26 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 22%;
+  height: calc(100% - 32px);
+  .tabs {
+    top: -32px;
+    position: absolute;
+  }
   .tab {
     background: rgba(0,0,0,0.4);
     display: inline-block;
     padding: 1px 5px;
-    position: absolute;
-    top: -23px;
+    height: 32px;
+    &.active {
+      font-weight: bold;
+    }
   }
   .tab_content {
     background: rgba(0,0,0,0.4);
-    height: 100%;
+    height: calc(100% - 32px);
   }
   .history {
-    height: calc(100% - 28px);
+    height: calc(100% - 32px);
     overflow: hidden;
     overflow-y: scroll;
   }
@@ -306,11 +338,7 @@
 }
 </style>
 
-<div class="hamburger hamburger--3dx" class:is-active={sidebarOpened} on:click={() => sidebarOpened = !sidebarOpened}>
-  <div class="hamburger-box">
-    <div class="hamburger-inner"></div>
-  </div>
-</div>
+
 <div class="status">
   {#if connected}
     <span>{tableState.poker_variant} 🤗</span>
@@ -322,33 +350,54 @@
 </div>
 
 <div on:keydown={e => {if (e.keyCode == 13) chatInput.focus()}} class="game" class:sidebar-opened={sidebarOpened}>
-
   <div class="sidebar">
-    
-    {#if !connected}
-      <div class="connection">
-        
-        <p>Please connect to a <a href="https://github.com/buka-gaming/server">Buka game server</a></p>
-        Server:
-        <input bind:value={gameServer}><br>
-        Access Token:
-        <input bind:value={accessToken}><br>
-        Table ID:
-        <input bind:value={tableId}><br>
 
-        <button on:click={connect}>Connect</button><br>
+    <div class="tab_panel">
+      <div class="tabs">
+        <div on:click="{() => tab = 'chat'}"     class="tab" class:active="{tab == 'chat'}">History</div>
+        <div on:click="{() => tab = 'settings'}" class="tab" class:active="{tab == 'settings'}">Settings</div>
       </div>
-      <hr>
-    {/if}
+      {#if tab == 'chat'}
+        <div class="tab_content chat">
+          <div class="history" bind:this={historyDiv}>
+            {#each logMessages as log}
+              <p>{cachedPlayerData && playerData(log.from).nick}: {log.text}</p>
+            {/each}
+          </div>
+          <div class="chat_input" bind:this={chatInput}>
+            <input on:keydown={e => {if (e.keyCode == 13) sendChat()}} bind:value={chatMessage}><button on:click={sendChat}>Send</button>
+          </div>
+        </div>
+      {/if}
+      {#if tab == 'settings'}
+        <div class="tab_content settings">  
+          <p>Please enter connection details:</p>
+          Server:
+          <input bind:value={gameServer}><br>
+          Access Token:
+          <input bind:value={accessToken}><br>
+          Table ID:
+          <input bind:value={tableId}><br>
 
+          <button on:click={connect}>Connect</button><br>
+        </div>
+      {/if}
+    </div>
   </div>
+
+  <div class="hamburger hamburger--3dx" class:is-active={sidebarOpened} on:click={() => sidebarOpened = !sidebarOpened}>
+    <div class="hamburger-box">
+      <div class="hamburger-inner"></div>
+    </div>
+  </div>
+  
   <div class="table">
     {#each Array(tableState.seat_count) as _, index}
-      <div class="seat seat_{index}">
+      <div class="seat seat_{index} {tableState.seats[index] && tableState.seats[index].seat_state || 'Empty'}">
         {#if tableState.seats[index] && seat(index)}
           <div class="player" transition:fly="{{ y: -15, duration: 350 }}">
-            {tableState.seats[index].nick}<br>
-            {tableState.seats[index].seat_state}<br>
+            {cachedPlayerData && playerData(tableState.seats[index].player_id).nick}<br>
+            <img alt="" class="profile_pic" src="{cachedPlayerData && playerData(tableState.seats[index].player_id).profile_pic}"><br>
             Stack: {tableState.seats[index].stack}
             <div class="bet">
               Bet: {tableState.seats[index].committed} <Chips amount="{tableState.seats[index].committed}"></Chips>
@@ -371,22 +420,15 @@
       </div>
     </div>
     {#if sitting()}
+      <button on:click={() => standUp()}>Stand Up</button>
       <div class="commands">
-        <button on:click={() => standUp()}>Stand Up</button>
+        {#if mySeatIndex() === tableState.acting_player}
+          <button on:click={() => fold()}>Fold</button>
+          <button on:click={() => check()}>Check</button>
+          <button on:click={() => raise()}>Raise</button>
+        {/if}
       </div>
     {/if}
-    <div class="tab_panel">
-      <div class="tab">History</div>
-      <div class="tab_content chat">
-        <div class="history" bind:this={historyDiv}>
-          {#each logMessages as log}
-            <p>{cachedPlayerData && playerData(log.from).nick}: {log.text}</p>
-          {/each}
-        </div>
-        <div class="chat_input" bind:this={chatInput}>
-          <input on:keydown={e => {if (e.keyCode == 13) sendChat()}} bind:value={chatMessage}><button on:click={sendChat}>Send</button>
-        </div>
-      </div>
-    </div>
+    
   </div>
 </div>
