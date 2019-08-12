@@ -20,10 +20,10 @@ export let tables;
 </style>
 
 <div class="lobby">
-  <h1>Lobby</h1>
+  <h1>Tables</h1>
   {#each tables as table}
     <div class="table">
-      <a href="/tables/{table.id}">{table.settings.small_blind}/{table.settings.big_blind}</a>
+      <a href="/tables/{table.id}">Table {table.id} - {table.settings.small_blind} / {table.settings.big_blind}</a>
     </div>
   {/each}
 </div>

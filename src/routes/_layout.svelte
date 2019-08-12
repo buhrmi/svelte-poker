@@ -1,9 +1,8 @@
 <script context="module">
-  let count = 1
   export async function preload(page, session) {
     let playerData = null
     try {
-      let url = process.env.API_URL+'/me.json'
+      const url = process.env.API_URL+'/me.json'
       const res = await this.fetch(url, {
         credentials: 'include',
         headers: {
@@ -26,7 +25,12 @@
 
   import { stores } from '@sapper/app';
   import { player } from './_stores.js';
-  
+  import Modal from '../components/modal.svelte';
+  import Deposit from '../components/deposit.svelte';
+
+	let showDeposits = false;
+  let page = stores.page
+
   $player = playerData;
   
   let { session } = stores();
@@ -46,6 +50,7 @@ nav {
   
   position: absolute;
   right: 0;
+  top: 0;
   padding: 6px;
   z-index: 100;
   .profile_pic {
@@ -55,14 +60,22 @@ nav {
     vertical-align: middle;
   }
 }
+.menu {
+  padding: 6px;
+}
 </style>
 
 <nav>
+  <div class="menu">
+    {#if segment}
+      <a href="/">⯇ Back to Lobby</a>
+    {/if}
+  </div>
   <div class="player">
     {#if $player}
       {$player.nick}
       <img src="{$player.profile_pic}" alt="" class="profile_pic">
-      | Balance (BTC): {$player.balances.BTC} Satoshi
+      <a href="#" on:click={() => showDeposits ^= true}>Balance (BTC): {$player.balances.BTC} Satoshi</a>
     {:else}
       <a href={process.env.API_URL}>Sign up / Log In</a>
     {/if}
@@ -70,3 +83,9 @@ nav {
 </nav>
 
 <slot></slot>
+
+{#if showDeposits}
+	<Modal on:close="{() => showDeposits = false}">
+    <Deposit player={player}></Deposit>
+	</Modal>
+{/if}

@@ -4,6 +4,45 @@
   import { player } from '../_stores';
   import { stores } from '@sapper/app';
   import { fly } from 'svelte/transition';
+  import { quintOut } from 'svelte/easing';
+	import { crossfade } from 'svelte/transition';
+
+  function dealCardTransition() {
+    console.log('dealing')
+    let dealDelay = 0
+    const transform = ''
+    return {
+      delay: dealDelay,
+      duration: 300,
+      easing: quintOut,
+      css: t => `
+					transform: ${transform} scale(${t});
+					opacity: ${t}
+				`
+    }
+  }
+
+  function dealCards() {
+    
+  }
+
+	const [send, receive] = crossfade({
+		duration: d => Math.sqrt(d * 1000),
+
+		fallback(node, params) {
+			const style = getComputedStyle(node);
+			const transform = style.transform === 'none' ? '' : style.transform;
+
+			return {
+				duration: 600,
+				easing: quintOut,
+				css: t => `
+					transform: ${transform} scale(${t});
+					opacity: ${t}
+				`
+			};
+		}
+	});
 
   let { session, page } = stores();
 
@@ -12,9 +51,10 @@
   
   let socket
   let log = [];
-  let sidebarOpened = true;
+  let sidebarOpened = false;
   let connected = false;
   let connecting = false
+  let timerStroke = 339.292;
   let chatMessage = '';
   let tab = 'chat';
   let gameServer = 'ws://buka-benj.dyndns.org:3000'
@@ -25,20 +65,43 @@
   let historyDiv
   let connectionString = ''
   let tableState = {
-    seat_count: 1,
-    seats: [{
-      "seat_state": 0,
-      "nick": "",
-      "player_id": 1,
-      "stack": 0,
-      "committed": 0
-    }],
+    seat_count: 0,
+    seats: [],
     board: [],
     pot: 0,
-    acting_player: 0
+    acting_player: 0,
+    dealer: 0
   }
 
   onMount(connect)
+  
+  onMount(function() {
+    let timeOut = new Date().getTime() + 12000
+    let timerStart = new Date().getTime()
+    function update() {
+      let ratio = (new Date().getTime() - timerStart) / (timeOut - timerStart)
+      timerStroke = 2 * 3.141 * 22 * (1-ratio)
+      requestAnimationFrame(update)
+      if (ratio > 1) {
+        // timeOut = new Date().getTime() + 12000
+        // timerStart = new Date().getTime()
+        // tableState.dealer ++
+        // tableState.acting_player ++
+        // if (tableState.dealer >= tableState.seats.length) tableState.dealer = 0
+        // if (tableState.acting_player >= tableState.seats.length) tableState.acting_player = 0
+      }
+      
+    }
+    requestAnimationFrame(update)
+  })
+
+  onMount(function() {
+    setInterval(function() {
+      tableState.board.push('as')
+      tableState.board = tableState.board
+      if (tableState.board.length > 5) tableState.board = []
+    }, 300)
+  })
 
   async function fetchPlayer(playerId) {
     if (typeof window === 'undefined') return
@@ -79,11 +142,16 @@
   async function sitDown(index) {
     await socket.send(JSON.stringify({msg: "sit-down", seat: index}))
     await bringIn($player.balances[currency]);
+    await sitIn();
+  }
+
+  async function sitIn() {
+    return await socket.send(JSON.stringify({msg: "sit-in"}))
   }
 
 
   async function bringIn(amount) {
-    await socket.send(JSON.stringify({msg: "bring-in", amount}))
+    return await socket.send(JSON.stringify({msg: "bring-in", amount}))
   }
 
   function standUp() {
@@ -195,11 +263,13 @@
   transform: translateX(0%);
 }
 .hamburger {
+  transition: all 0.3s;
   position: absolute;
   top: 0;
   right: 0;
   z-index: 501;
 }
+
 .seat {
   position: absolute;
   &.seat_0 {
@@ -228,12 +298,33 @@
   }
   .player {
     text-align: center;
-    width: 200px;
+    width: 80px;
     position: absolute;
+    .stack {
+      width: 80%;
+      margin: 0 auto;
+      font-size: 0.9em;
+      border-radius: 100px;
+      line-height: 1.2em;
+      color: rgb(240,200,100);
+      background-color: rgba(0,0,0,0.3);
+    }
+  }
+  .image {
+    height: 48px;
+    position: relative;
   }
   .profile_pic {
+    margin-top: 4px;
     width: 40px;
+    height: 40px;
     border-radius: 100px;
+    vertical-align: middle;
+  }
+  svg {
+    position: relative;
+    top: -44px;
+    transform: rotate(-90deg) scaleY(-1);
   }
 }
 .middle {
@@ -273,12 +364,15 @@
   .sidebar-opened .table {
     margin-right: 320px;
   }
+  .sidebar-opened .hamburger {
+    right: 320px;
+  }
 }
 .status {
   position: absolute;
-  top: 7px;
+  bottom: 7px;
   left: 7px;
-  right: 0;
+  
   z-index: 502;
 }
 
@@ -395,10 +489,25 @@
     {#each Array(tableState.seat_count) as _, index}
       <div class="seat seat_{index} {tableState.seats[index] && tableState.seats[index].seat_state || 'Empty'}">
         {#if tableState.seats[index] && seat(index)}
-          <div class="player" transition:fly="{{ y: -15, duration: 350 }}">
-            {cachedPlayerData && playerData(tableState.seats[index].player_id).nick}<br>
-            <img alt="" class="profile_pic" src="{cachedPlayerData && playerData(tableState.seats[index].player_id).profile_pic}"><br>
-            Stack: {tableState.seats[index].stack}
+          {#if tableState.dealer == index}
+            <div class="dealer" in:receive={'dealer'} out:send={'dealer'}>DEALER</div>
+          {/if}
+          <div class="player" in:fly="{{ y: -15, duration: 350 }}">
+            <div class="nick">
+              {cachedPlayerData && playerData(tableState.seats[index].player_id).nick}
+            </div>
+            <div class="image">
+              <img alt="" class="profile_pic" src="{cachedPlayerData && playerData(tableState.seats[index].player_id).profile_pic}">
+              {#if tableState.acting_player == index}
+                <svg width="48" height="48" viewBox="0 0 48 48">
+                  <circle stroke-dasharray="{timerStroke} {2 * 3.141 * 22}" cx="24" cy="24" r="22" fill="none" stroke="#FFEE44" stroke-width="4" />
+                </svg>
+              {/if}
+            </div>
+            {tableState.seats[index].seat_state}
+            <div class="stack">
+              {tableState.seats[index].stack}
+            </div>
             <div class="bet">
               Bet: {tableState.seats[index].committed} <Chips amount="{tableState.seats[index].committed}"></Chips>
             </div>
@@ -412,7 +521,12 @@
     {/each}
     <div class="middle">
       <div class="board">
-        {#each tableState.board as card}<img src="/cards/{card[0]}{card[1]}.png" class="card" alt="{card[0]}{card[1]}">{/each}{#each Array(5 - tableState.board.length) as _}<img src="/cards/empty.png" class="card placeholder" alt="Placeholder">{/each}
+        {#each tableState.board as card}
+          <img in:fly="{{ y: -25, duration: 450 }}" src="/cards/{card[0]}{card[1]}.png" class="card" alt="{card[0]}{card[1]}">
+        {/each}
+        {#each Array(5 - tableState.board.length) as _}
+          <img src="/cards/empty.png" class="card placeholder" alt="Placeholder">
+        {/each}
         <div class="pot">
           <Chips amount={tableState.pot}></Chips>
           <p>Pot: {Number(tableState.pot).toLocaleString()} Satoshi</p>

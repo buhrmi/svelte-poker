@@ -22,7 +22,9 @@ export default {
 			replace({
 				'process.browser': true,
 				'process.env.NODE_ENV': JSON.stringify(mode),
-				'process.env.API_URL': JSON.stringify(api)
+				'process.env.API_URL': JSON.stringify(api),
+				'@components': __dirname + '/src/components/',
+				'@routes': __dirname + '/src/routes/',
 			}),
 			svelte({
 				dev,
@@ -53,7 +55,9 @@ export default {
 			replace({
 				'process.browser': false,
 				'process.env.NODE_ENV': JSON.stringify(mode),
-				'process.env.API_URL': JSON.stringify(api)
+				'process.env.API_URL': JSON.stringify(api),
+				'@components': __dirname + '/src/components',
+				'@routes': __dirname + '/src/routes',
 			}),
 			svelte({
 				generate: 'ssr',
