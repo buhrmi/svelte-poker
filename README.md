@@ -1,4 +1,4 @@
-# Svelte Poker [![Deploy to now](https://deploy.now.sh/static/button.svg)](https://deploy.now.sh/?repo=https://github.com/buhrmi/svelte-poker)
+# Svelte Poker [![Deploy to now](https://deploy.now.sh/static/button.svg)](https://deploy.now.sh/?repo=https://github.com/buhrmi/svelte-poker&env=API_URL&env=GAME_SERVER_URL)
 
 A poker frontend to try out Svelte/Sapper
 
