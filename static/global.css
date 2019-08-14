@@ -17,3 +17,72 @@ a {
 #sapper {
 	height: 100%;
 }
+
+
+p.bubble {
+	position: absolute;
+	width: 140px;
+	text-align: center;
+	line-height: 1em;
+	margin: 4px auto;
+	background-color: #fff;
+	border: 2px solid #333;
+	border-radius: 14px;
+	font-family: sans-serif;
+	padding: 5px;
+	font-size: 14px;
+	z-index: 5;
+	color: black;
+
+}
+
+p.thought {
+	width: 300px;
+	border-radius: 200px;
+	padding: 30px;	
+}
+
+p.bubble:before,
+p.bubble:after {
+	content: ' ';
+	position: absolute;
+	width: 0;
+	height: 0;
+}
+
+p.speech:before {
+	left: 51px;
+	bottom: -16px;
+	border: 8px solid;
+	border-color: #333 transparent transparent #333;
+}
+
+p.speech:after {
+	left: 53px;
+	bottom: -10px;
+	border: 5px solid;
+	border-color: #fff transparent transparent #fff;
+}
+
+p.thought:before,
+p.thought:after {
+	left: 10px;
+	bottom: -30px;
+	width: 40px;
+	height: 40px;
+	background-color: #fff;
+	border: 8px solid #333;
+	-webkit-border-radius: 28px;
+	-moz-border-radius: 28px;
+	border-radius: 28px;
+}
+
+p.thought:after {
+	width: 20px;
+	height: 20px;
+	left: 5px;
+	bottom: -40px;
+	-webkit-border-radius: 18px;
+	-moz-border-radius: 18px;
+	border-radius: 18px;
+}

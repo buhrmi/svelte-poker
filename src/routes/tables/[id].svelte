@@ -3,7 +3,7 @@
   import { onDestroy, tick, onMount } from 'svelte';
   import { player } from '../_stores';
   import { stores } from '@sapper/app';
-  import { fly } from 'svelte/transition';
+  import { fly, fade } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
 	import { crossfade } from 'svelte/transition';
 
@@ -45,6 +45,15 @@
 	});
 
   let { session, page } = stores();
+  let lastChatMessages = []
+  let chatMessagesTimeouts = []
+
+  function displayChatMessage(playerID, message) {
+    let playerIndex = getSeatIndexFromID(playerID)
+    lastChatMessages[playerIndex] = message
+    clearTimeout(chatMessagesTimeouts[playerIndex])
+    chatMessagesTimeouts[playerIndex] = setTimeout(function(){lastChatMessages[playerIndex] = ''}, 3000)
+  }
 
   export let accessToken = $page.query.access_token || $session.access_token;
   export let tableId = $page.params.id;
@@ -67,17 +76,35 @@
   let tableState = {
     seat_count: 0,
     seats: [],
-    board: [],
+    hand: {
+      board: []
+    },
     pot: 0,
     acting_player: 0,
     dealer: 0
   }
+  tableState.seat_count = 3
+  tableState.seats = [{
+    seat_state: "SittingOut",
+    committed: 0,
+    stack: 0,
+    player_id: 1},
+    {
+    seat_state: "SittingOut",
+    committed: 0,
+    stack: 0,
+    player_id: 1},{
+    seat_state: "SittingOut",
+    committed: 0,
+    stack: 0,
+    player_id: 1}
+  ]
 
   onMount(connect)
   
+  let timeOut = new Date().getTime() + 12000
+  let timerStart = new Date().getTime()
   onMount(function() {
-    let timeOut = new Date().getTime() + 12000
-    let timerStart = new Date().getTime()
     function update() {
       let ratio = (new Date().getTime() - timerStart) / (timeOut - timerStart)
       timerStroke = 2 * 3.141 * 22 * (1-ratio)
@@ -95,14 +122,6 @@
     requestAnimationFrame(update)
   })
 
-  onMount(function() {
-    setInterval(function() {
-      tableState.board.push('as')
-      tableState.board = tableState.board
-      if (tableState.board.length > 5) tableState.board = []
-    }, 300)
-  })
-
   async function fetchPlayer(playerId) {
     if (typeof window === 'undefined') return
     const res = await fetch(process.env.API_URL+`/players/${playerId}.json`)
@@ -116,6 +135,13 @@
     fetchPlayer(playerId)
     return {
       nick: 'Loading...'
+    }
+  }
+
+  function getSeatIndexFromID(playerId) {
+    for (let index = 0; index < tableState.seats.length; index++) {
+      const element = tableState.seats[index];
+      if (element.player_id == playerId) return index
     }
   }
 
@@ -173,10 +199,13 @@
     socket.onmessage = (event) => {
       var data = JSON.parse(event.data)
       console.log(data)
-      if (data.seats) tableState.seats = data.seats
-      if (data.seat_count) tableState.seat_count = data.seat_count
-      if (data.poker_variant) tableState.poker_variant = data.poker_variant
-
+      if (data.msg == 'table_state') {
+        tableState = data
+        if (data.hand && data.hand.timeout) {
+          timeOut = new Date().getTime() + 12000 // data.hand.timeout
+          timerStart = new Date().getTime()
+        }
+      }
       if (data.echo && data.echo.message) {
         const echoMessage = JSON.parse(data.echo.message);
 
@@ -187,6 +216,7 @@
       if (data.msg == "chat") {
         logMessages.push(data)
         logMessages = logMessages
+        displayChatMessage(data.from, data.text)
         tick().then(() => historyDiv.scrollTop = historyDiv.scrollHeight);
       }
     };
@@ -212,13 +242,21 @@
 
   // let demo = setInterval((() => tableState.pot = Math.floor(Math.random() * 100000)), 100)
 
-  function fold() {}
-  function check() {}
-  function raise() {}
+  function fold() {
+    socket.send(JSON.stringify({msg: 'fold'}))
+  }
+  function check() {
+    socket.send(JSON.stringify({msg: 'check'}))
+  }
+  function call() {
+    socket.send(JSON.stringify({msg: 'call'}))
+  }
+  function raise(amount) {
+    socket.send(JSON.stringify({msg: 'raise', amount}))
+  }
 
   function sendChat() {
     socket.send(JSON.stringify({msg: 'chat', text: chatMessage}))
-    logMessages = logMessages
     chatMessage = '';
   }
 
@@ -226,6 +264,7 @@
 
 <style type="text/sass">
 .game {
+  overflow: hidden;
   position: relative;
   width: 100%;
   height: calc(100% - 35px);
@@ -300,6 +339,37 @@
     text-align: center;
     width: 80px;
     position: absolute;
+    text-shadow: 0px 1px 1px rgba(0,0,0,0.5);
+    .bubble {
+      bottom: 80px;
+      left: -15px;
+    }
+    .hole {
+      .card1, .card2 {
+        position: absolute;
+        width: 23px;
+        z-index: 1;
+        box-shadow: -1px 1px 2px rgba(0,0,0,0.5);
+      }
+      .card1 {
+        transform: rotate(-5deg);
+        left: 65px;
+        top: 18px;
+      }
+      .card2 {
+        transform: rotate(12deg);
+        left: 73px;
+        top: 19px;
+      }
+    }
+    .bet {
+      position: absolute;
+      left: 65px;
+      top: 50px;
+      font-size: 16px;
+      
+      white-space: nowrap; 
+    }
     .stack {
       width: 80%;
       margin: 0 auto;
@@ -320,6 +390,7 @@
     height: 40px;
     border-radius: 100px;
     vertical-align: middle;
+    box-shadow: -1px 1px 2px rgba(0,0,0,0.5);
   }
   svg {
     position: relative;
@@ -489,16 +560,23 @@
     {#each Array(tableState.seat_count) as _, index}
       <div class="seat seat_{index} {tableState.seats[index] && tableState.seats[index].seat_state || 'Empty'}">
         {#if tableState.seats[index] && seat(index)}
-          {#if tableState.dealer == index}
+          {#if tableState.hand && tableState.hand.button_seat == index}
             <div class="dealer" in:receive={'dealer'} out:send={'dealer'}>DEALER</div>
           {/if}
           <div class="player" in:fly="{{ y: -15, duration: 350 }}">
+            {#if lastChatMessages[index]}
+              <p in:fade="{{ duration: 100 }}" out:fly="{{ y: -8, duration: 650 }}"class="bubble speech">{lastChatMessages[index]}</p>
+            {/if}
             <div class="nick">
               {cachedPlayerData && playerData(tableState.seats[index].player_id).nick}
             </div>
+            <div class="hole">
+              <img class="card1" alt="Card" src="/cards/back.png">
+              <img class="card2" alt="Card" src="/cards/back.png">
+            </div>
             <div class="image">
               <img alt="" class="profile_pic" src="{cachedPlayerData && playerData(tableState.seats[index].player_id).profile_pic}">
-              {#if tableState.acting_player == index}
+              {#if tableState.hand && tableState.hand.acting_player == index}
                 <svg width="48" height="48" viewBox="0 0 48 48">
                   <circle stroke-dasharray="{timerStroke} {2 * 3.141 * 22}" cx="24" cy="24" r="22" fill="none" stroke="#FFEE44" stroke-width="4" />
                 </svg>
@@ -521,14 +599,16 @@
     {/each}
     <div class="middle">
       <div class="board">
-        {#each tableState.board as card}
-          <img in:fly="{{ y: -25, duration: 450 }}" src="/cards/{card[0]}{card[1]}.png" class="card" alt="{card[0]}{card[1]}">
-        {/each}
-        {#each Array(5 - tableState.board.length) as _}
-          <img src="/cards/empty.png" class="card placeholder" alt="Placeholder">
-        {/each}
+        {#if tableState.hand}
+          {#each tableState.hand.board as card}
+            <img in:fly="{{ y: -25, duration: 450 }}" src="/cards/{card[0].toLowerCase()}{card[1]}.png" class="card" alt="{card[0]}{card[1]}">
+          {/each}
+          {#each Array(5 - tableState.hand.board.length) as _}
+            <img src="/cards/empty.png" class="card placeholder" alt="Placeholder">
+          {/each}
+        {/if}
         <div class="pot">
-          <Chips amount={tableState.pot}></Chips>
+          <!-- <Chips amount={tableState.pot}></Chips> -->
           <p>Pot: {Number(tableState.pot).toLocaleString()} Satoshi</p>
         </div>
       </div>
@@ -536,10 +616,11 @@
     {#if sitting()}
       <button on:click={() => standUp()}>Stand Up</button>
       <div class="commands">
-        {#if mySeatIndex() === tableState.acting_player}
+        {#if tableState.hand && mySeatIndex() === tableState.hand.acting_player}
           <button on:click={() => fold()}>Fold</button>
           <button on:click={() => check()}>Check</button>
-          <button on:click={() => raise()}>Raise</button>
+          <button on:click={() => call()}>Call</button>
+          <button on:click={() => raise(5)}>Raise 5</button>
         {/if}
       </div>
     {/if}
