@@ -68,7 +68,13 @@
   let tab = 'chat';
   let gameServer = 'ws://buka-benj.dyndns.org:3000'
   // let gameServer = 'ws://buka-db.dyndns.org:3000'
-  let logMessages = []
+  let chatLog = []
+  chatLog = [
+    {from: 1, text:'derp'},
+    {from: 1, text:'derp'},
+    {from: 1, text:'derp'},
+    {from: 1, text:'derp'},
+  ]
   let chatInput
   let currency = 'BTC'
   let historyDiv
@@ -131,6 +137,9 @@
   
   let cachedPlayerData = {}
   function playerData(playerId) {
+    if (!playerId) {
+      return {nick: ''}
+    }
     if (cachedPlayerData[playerId]) return cachedPlayerData[playerId];
     fetchPlayer(playerId)
     return {
@@ -190,9 +199,13 @@
 
     connecting = true
     socket = new WebSocket(connectionString);
+    chatLog.push({text: "Connecting... Please wait ⌛"})
+    chatLog = chatLog
 
     socket.onopen = () => {
-      connected = true 
+      chatLog.push({text: `Connected! Playing ${tableState.poker_variant}! 🤗`})
+      chatLog = chatLog
+      connected = true
       connecting = false
     }
 
@@ -214,8 +227,8 @@
       }
 
       if (data.msg == "chat") {
-        logMessages.push(data)
-        logMessages = logMessages
+        chatLog.push(data)
+        chatLog = chatLog
         displayChatMessage(data.from, data.text)
         tick().then(() => historyDiv.scrollTop = historyDiv.scrollHeight);
       }
@@ -228,6 +241,8 @@
         // e.g. gameServer process killed or network down
         // event.code is usually 1006 in this case
         console.log('[close] Connection died');
+        chatLog.push({text: 'Connection failed 😢'})
+        chatLog = chatLog
       }
       connected = false
       connecting = false
@@ -341,7 +356,7 @@
     position: absolute;
     text-shadow: 0px 1px 1px rgba(0,0,0,0.5);
     .bubble {
-      bottom: 80px;
+      bottom: 66px;
       left: -15px;
     }
     .hole {
@@ -354,18 +369,18 @@
       .card1 {
         transform: rotate(-5deg);
         left: 65px;
-        top: 18px;
+        top: 33px;
       }
       .card2 {
         transform: rotate(12deg);
         left: 73px;
-        top: 19px;
+        top: 34px;
       }
     }
     .bet {
       position: absolute;
       left: 65px;
-      top: 50px;
+      top: 65px;
       font-size: 16px;
       
       white-space: nowrap; 
@@ -445,6 +460,16 @@
   left: 7px;
   
   z-index: 502;
+  .log {
+    img {
+      border-radius: 12px;
+      width: 14px;
+      vertical-align: middle;
+    }
+    span {
+      vertical-align: middle;
+    }
+  }
 }
 
 .tab_panel {
@@ -505,18 +530,22 @@
 
 
 <div class="status">
-  {#if connected}
-    <span>{tableState.poker_variant} 🤗</span>
-  {:else if connecting}
-    <span>Connecting... Please wait ⌛</span>
-  {:else}
-    <span>Not connected 😢</span>
-  {/if}
+  {#each chatLog as log}
+    {#if log.from}
+      <p class="log">
+        <img src={cachedPlayerData && playerData(log.from).profile_pic}>
+        <span>{cachedPlayerData && playerData(log.from).nick}: {log.text}</span>
+      </p>
+    {:else}
+      <p class="log">{log.text}</p>
+    {/if}
+  {/each}
+  <div class="chat_input" bind:this={chatInput}>
+    <input on:keydown={e => {if (e.keyCode == 13 && connected) sendChat()}} bind:value={chatMessage}><button disabled={!connected} on:click={sendChat}>Send</button>
+  </div>
 </div>
-
 <div on:keydown={e => {if (e.keyCode == 13) chatInput.focus()}} class="game" class:sidebar-opened={sidebarOpened}>
   <div class="sidebar">
-
     <div class="tab_panel">
       <div class="tabs">
         <div on:click="{() => tab = 'chat'}"     class="tab" class:active="{tab == 'chat'}">History</div>
@@ -525,7 +554,7 @@
       {#if tab == 'chat'}
         <div class="tab_content chat">
           <div class="history" bind:this={historyDiv}>
-            {#each logMessages as log}
+            {#each chatLog as log}
               <p>{cachedPlayerData && playerData(log.from).nick}: {log.text}</p>
             {/each}
           </div>
@@ -570,6 +599,9 @@
             <div class="nick">
               {cachedPlayerData && playerData(tableState.seats[index].player_id).nick}
             </div>
+            <div class="stack">
+              {tableState.seats[index].stack}
+            </div>
             <div class="hole">
               <img class="card1" alt="Card" src="/cards/back.png">
               <img class="card2" alt="Card" src="/cards/back.png">
@@ -583,9 +615,6 @@
               {/if}
             </div>
             {tableState.seats[index].seat_state}
-            <div class="stack">
-              {tableState.seats[index].stack}
-            </div>
             <div class="bet">
               Bet: {tableState.seats[index].committed} <Chips amount="{tableState.seats[index].committed}"></Chips>
             </div>
