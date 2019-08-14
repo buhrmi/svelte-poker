@@ -1,6 +1,6 @@
 # Svelte Poker [![Deploy to now](https://deploy.now.sh/static/button.svg)](https://deploy.now.sh/?repo=https://github.com/buhrmi/svelte-poker&env=API_URL&env=GAME_SERVER_URL)
 
-A poker frontend to try out [Svelte](https://svelte.dev)/[Sapper](https://sapper.svelte.dev). Currently it only works with servers running the (proprietary) Buka protocol, but support for different servers/engines might be added in the future. It can also be used to visualize games played by various poker AIs (more on that soon).
+A poker frontend to try out [Svelte](https://svelte.dev)/[Sapper](https://sapper.svelte.dev). Currently it only works with servers running a proprietary protocol, but support for different servers/engines might be added in the future. It can also be used to visualize games played by various poker AIs (more on that soon).
 
 ## Progress
 
