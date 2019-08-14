@@ -1,6 +1,6 @@
 # Svelte Poker [![Deploy to now](https://deploy.now.sh/static/button.svg)](https://deploy.now.sh/?repo=https://github.com/buhrmi/svelte-poker)
 
-A poker frontend written in Svelte
+A poker game to try out app development with Svelte/Sapper
 
 ## Progress
 
