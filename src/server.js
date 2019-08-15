@@ -4,13 +4,13 @@ import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import * as sapper from '@sapper/server';
 
-import { Pool } from 'pg';
-const pool = new Pool({
-  connectionString: 'postgres://buka-db.dyndns.org:5432/buhrmi',
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-})
+// import { Pool } from 'pg';
+// const pool = new Pool({
+//   connectionString: 'postgres://buka-db.dyndns.org:5432/buhrmi',
+//   max: 20,
+//   idleTimeoutMillis: 30000,
+//   connectionTimeoutMillis: 2000,
+// })
 
 const { PORT, NODE_ENV } = process.env;
 const dev = NODE_ENV === 'development';
