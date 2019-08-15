@@ -16,7 +16,7 @@
   }
 </script>
 
-<style type="text/sass">
+<style lang="scss">
 .chips {
   display: block;
   margin-bottom: 8%;

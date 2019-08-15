@@ -24,7 +24,7 @@
   export let segment;
 
   import { stores } from '@sapper/app';
-  import { player } from './_stores.js';
+  import { player } from '../stores.js';
   import Modal from '../components/modal.svelte';
   import Deposit from '../components/deposit.svelte';
 
@@ -37,7 +37,7 @@
 </script>
 
 
-<style type="text/sass">
+<style lang="scss">
 nav {
   height: 35px;
   background: #101016;
@@ -47,12 +47,12 @@ nav {
   z-index: 501;
 }
 .player {
-  
   position: absolute;
   right: 0;
   top: 0;
   padding: 6px;
   z-index: 100;
+  
   .profile_pic {
     border-radius: 100px;
     width: 25px;

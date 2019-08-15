@@ -1,7 +1,7 @@
 <script>
   import Chips from '../../components/chips.svelte';
+  import { player } from '../../stores';
   import { onDestroy, tick, onMount } from 'svelte';
-  import { player } from '../_stores';
   import { stores } from '@sapper/app';
   import { fly, fade } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
@@ -24,6 +24,15 @@
 
   function dealCards() {
     
+  }
+
+  const actionsPastTense = {
+    P: 'posted',
+    F: 'folded',
+    X: 'checked',
+    C: 'called',
+    B: 'bet',
+    R: 'raised'
   }
 
 	const [send, receive] = crossfade({
@@ -52,7 +61,10 @@
     let playerIndex = getSeatIndexFromID(playerID)
     lastChatMessages[playerIndex] = message
     clearTimeout(chatMessagesTimeouts[playerIndex])
-    chatMessagesTimeouts[playerIndex] = setTimeout(function(){lastChatMessages[playerIndex] = ''}, 3000)
+    let timeout = 3000
+    timeout += message.length * 50;
+    timeout = Math.min(timeout, 6000)
+    chatMessagesTimeouts[playerIndex] = setTimeout(function(){lastChatMessages[playerIndex] = ''}, timeout)
   }
 
   export let accessToken = $page.query.access_token || $session.access_token;
@@ -69,12 +81,10 @@
   let gameServer = 'ws://buka-benj.dyndns.org:3000'
   // let gameServer = 'ws://buka-db.dyndns.org:3000'
   let chatLog = []
-  chatLog = [
-    {from: 1, text:'derp'},
-    {from: 1, text:'derp'},
-    {from: 1, text:'derp'},
-    {from: 1, text:'derp'},
-  ]
+  let statusDiv
+  
+  $: if (chatLog && statusDiv) statusDiv.scrollTop = statusDiv.scrollHeight;
+
   let chatInput
   let currency = 'BTC'
   let historyDiv
@@ -89,22 +99,22 @@
     acting_player: 0,
     dealer: 0
   }
-  tableState.seat_count = 3
-  tableState.seats = [{
-    seat_state: "SittingOut",
-    committed: 0,
-    stack: 0,
-    player_id: 1},
-    {
-    seat_state: "SittingOut",
-    committed: 0,
-    stack: 0,
-    player_id: 1},{
-    seat_state: "SittingOut",
-    committed: 0,
-    stack: 0,
-    player_id: 1}
-  ]
+  // tableState.seat_count = 3
+  // tableState.seats = [{
+  //   seat_state: "SittingOut",
+  //   committed: 0,
+  //   stack: 0,
+  //   player_id: 1},
+  //   {
+  //   seat_state: "SittingOut",
+  //   committed: 0,
+  //   stack: 0,
+  //   player_id: 1},{
+  //   seat_state: "SittingOut",
+  //   committed: 0,
+  //   stack: 0,
+  //   player_id: 1}
+  // ]
 
   onMount(connect)
   
@@ -203,7 +213,7 @@
     chatLog = chatLog
 
     socket.onopen = () => {
-      chatLog.push({text: `Connected! Playing ${tableState.poker_variant}! 🤗`})
+      chatLog.push({text: `Connected 🤗`})
       chatLog = chatLog
       connected = true
       connecting = false
@@ -221,9 +231,15 @@
       }
       if (data.echo && data.echo.message) {
         const echoMessage = JSON.parse(data.echo.message);
-
         if (data.echo.player_id == $player.id && echoMessage.msg == 'bring-in') player.reload()
         if (data.echo.player_id == $player.id && echoMessage.msg == 'stand-up') player.reload()
+        chatLog.push({from: data.echo.player_id, text: echoMessage.msg})
+        chatLog = chatLog
+        if (echoMessage.msg == 'fold') {
+          let actorSeat = tableState.seats[getSeatIndexFromID(data.echo.player_id)];
+          let text = actionsPastTense[tableState.seats[index].last_action] + ' ' + tableState.seats[index].committed
+          chatLog.push({from: data.echo.player_id, type: 'action', text})
+        }
       }
 
       if (data.msg == "chat") {
@@ -266,9 +282,13 @@
   function call() {
     socket.send(JSON.stringify({msg: 'call'}))
   }
+  function bet(amount) {
+    socket.send(JSON.stringify({msg: 'bet', amount}))
+  }
   function raise(amount) {
     socket.send(JSON.stringify({msg: 'raise', amount}))
   }
+  
 
   function sendChat() {
     socket.send(JSON.stringify({msg: 'chat', text: chatMessage}))
@@ -277,7 +297,7 @@
 
 </script>
 
-<style type="text/sass">
+<style lang="scss">
 .game {
   overflow: hidden;
   position: relative;
@@ -294,8 +314,7 @@
   background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.1) 70%,rgba(0,0,0,0.3) 100%);
 }
 .commands {
-  position: absolute;
-  bottom: 20%;
+  
   text-align: center;
 }
 .sidebar {
@@ -458,9 +477,13 @@
   position: absolute;
   bottom: 7px;
   left: 7px;
-  
   z-index: 502;
+  max-height: 30%;
+  overflow-y: auto;
   .log {
+    &.action {
+      font-style: italic;
+    }
     img {
       border-radius: 12px;
       width: 14px;
@@ -529,16 +552,21 @@
 </style>
 
 
-<div class="status">
+<div class="status" bind:this={statusDiv}>
   {#each chatLog as log}
-    {#if log.from}
-      <p class="log">
-        <img src={cachedPlayerData && playerData(log.from).profile_pic}>
-        <span>{cachedPlayerData && playerData(log.from).nick}: {log.text}</span>
-      </p>
-    {:else}
-      <p class="log">{log.text}</p>
-    {/if}
+    <p class="log" class:type={log.type}>
+      {#if log.from}
+        {#if log.type == 'action'}
+          <img src={cachedPlayerData && playerData(log.from).profile_pic}>
+          <span>{cachedPlayerData && playerData(log.from).nick} {log.text}</span>
+        {:else}
+          <img src={cachedPlayerData && playerData(log.from).profile_pic}>
+          <span>{cachedPlayerData && playerData(log.from).nick}: {log.text}</span>
+        {/if}
+      {:else}
+        {log.text}
+      {/if}
+    </p>
   {/each}
   <div class="chat_input" bind:this={chatInput}>
     <input on:keydown={e => {if (e.keyCode == 13 && connected) sendChat()}} bind:value={chatMessage}><button disabled={!connected} on:click={sendChat}>Send</button>
@@ -586,13 +614,14 @@
   </div>
   
   <div class="table">
+    Acting Player: {tableState.hand && tableState.hand.acting_player}
     {#each Array(tableState.seat_count) as _, index}
       <div class="seat seat_{index} {tableState.seats[index] && tableState.seats[index].seat_state || 'Empty'}">
         {#if tableState.seats[index] && seat(index)}
           {#if tableState.hand && tableState.hand.button_seat == index}
             <div class="dealer" in:receive={'dealer'} out:send={'dealer'}>DEALER</div>
           {/if}
-          <div class="player" in:fly="{{ y: -15, duration: 350 }}">
+          <div class:action="{tableState.seats[index].last_action}" class="player" transition:fly|local="{{ y: -15, duration: 350 }}">
             {#if lastChatMessages[index]}
               <p in:fade="{{ duration: 100 }}" out:fly="{{ y: -8, duration: 650 }}"class="bubble speech">{lastChatMessages[index]}</p>
             {/if}
@@ -602,10 +631,12 @@
             <div class="stack">
               {tableState.seats[index].stack}
             </div>
-            <div class="hole">
-              <img class="card1" alt="Card" src="/cards/back.png">
-              <img class="card2" alt="Card" src="/cards/back.png">
-            </div>
+            {#if tableState.seats[index].last_action !== 'F'}
+              <div out:fly|local={{duration: 1000, y: 20}} class="hole">
+                <img class="card1" alt="Card" src="/cards/back.png">
+                <img class="card2" alt="Card" src="/cards/back.png">
+              </div>
+            {/if}
             <div class="image">
               <img alt="" class="profile_pic" src="{cachedPlayerData && playerData(tableState.seats[index].player_id).profile_pic}">
               {#if tableState.hand && tableState.hand.acting_player == index}
@@ -615,9 +646,11 @@
               {/if}
             </div>
             {tableState.seats[index].seat_state}
-            <div class="bet">
-              Bet: {tableState.seats[index].committed} <Chips amount="{tableState.seats[index].committed}"></Chips>
-            </div>
+            {#if tableState.seats[index].last_action}
+              <div class="bet">
+                {actionsPastTense[tableState.seats[index].last_action]} {tableState.seats[index].committed} <Chips amount="{tableState.seats[index].committed}"></Chips>
+              </div>
+            {/if}
           </div>
         {:else}
           {#if !sitting()}
@@ -644,14 +677,18 @@
     </div>
     {#if sitting()}
       <button on:click={() => standUp()}>Stand Up</button>
-      <div class="commands">
+      
         {#if tableState.hand && mySeatIndex() === tableState.hand.acting_player}
           <button on:click={() => fold()}>Fold</button>
           <button on:click={() => check()}>Check</button>
           <button on:click={() => call()}>Call</button>
+          <button on:click={() => bet(5)}>Bet 5</button>
           <button on:click={() => raise(5)}>Raise 5</button>
         {/if}
-      </div>
+        {#if tableState.seats[mySeatIndex()].seat_state == 'SittingOut'}
+          <button on:click={() => sitIn()}>Sit In</button>
+        {/if}
+      
     {/if}
     
   </div>

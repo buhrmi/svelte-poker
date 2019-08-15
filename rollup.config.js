@@ -3,9 +3,10 @@ import replace from 'rollup-plugin-replace';
 import commonjs from 'rollup-plugin-commonjs';
 import svelte from 'rollup-plugin-svelte';
 import { terser } from 'rollup-plugin-terser';
+import alias from 'rollup-plugin-alias';
 import config from 'sapper/config/rollup.js';
 import pkg from './package.json';
-import { sass } from "svelte-preprocess-sass";
+import autoPreprocess from 'svelte-preprocess'
 
 const mode = process.env.NODE_ENV;
 const api = process.env.API_URL || 'http://buka-buhrmi.dyndns.org'
@@ -14,25 +15,28 @@ const dev = mode === 'development';
 const onwarn = (warning, onwarn) => (warning.code === 'CIRCULAR_DEPENDENCY' && /[/\\]@sapper[/\\]/.test(warning.message)) || onwarn(warning);
 const dedupe = importee => importee === 'svelte' || importee.startsWith('svelte/');
 
+const replacements = {
+	'process.browser': false,
+	'process.env.NODE_ENV': JSON.stringify(mode),
+	'process.env.API_URL': JSON.stringify(api)
+}
+
+const aliases = {
+	'@': __dirname + '/src',
+}
+
 export default {
 	client: {
 		input: config.client.input(),
 		output: config.client.output(),
 		plugins: [
-			replace({
-				'process.browser': true,
-				'process.env.NODE_ENV': JSON.stringify(mode),
-				'process.env.API_URL': JSON.stringify(api),
-				'@components': __dirname + '/src/components/',
-				'@routes': __dirname + '/src/routes/',
-			}),
+			replace(replacements),
+			alias(aliases),
 			svelte({
 				dev,
 				hydratable: true,
 				emitCss: true,
-				preprocess: {
-				  style: sass()
-				}
+				preprocess: autoPreprocess()
 			}),
 			resolve({
 				browser: true,
@@ -52,19 +56,12 @@ export default {
 		input: config.server.input(),
 		output: config.server.output(),
 		plugins: [
-			replace({
-				'process.browser': false,
-				'process.env.NODE_ENV': JSON.stringify(mode),
-				'process.env.API_URL': JSON.stringify(api),
-				'@components': __dirname + '/src/components',
-				'@routes': __dirname + '/src/routes',
-			}),
+			replace(replacements),
+			alias(aliases),
 			svelte({
 				generate: 'ssr',
 				dev,
-				preprocess: {
-				  style: sass()
-				}
+				preprocess: autoPreprocess()
 			}),
 			resolve({
 				dedupe
@@ -83,10 +80,7 @@ export default {
 		output: config.serviceworker.output(),
 		plugins: [
 			resolve(),
-			replace({
-				'process.browser': true,
-				'process.env.NODE_ENV': JSON.stringify(mode)
-			}),
+			replace(replacements),
 			commonjs(),
 			!dev && terser()
 		],
