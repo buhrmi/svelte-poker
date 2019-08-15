@@ -1,11 +1,33 @@
-# Table viewer [![Deploy to now](https://deploy.now.sh/static/button.svg)](https://deploy.now.sh/?repo=https://github.com/buka-gaming/viewer)
+# Svelte Poker [![Deploy to now](https://deploy.now.sh/static/button.svg)](https://deploy.now.sh/?repo=https://github.com/buhrmi/svelte-poker&env=API_URL&env=GAME_SERVER_URL)
 
-This is a web-based table viewer for Buka. Buka is creating the world's most amazing poker community.
+A poker frontend to try out [Svelte](https://svelte.dev)/[Sapper](https://sapper.svelte.dev). Currently it only works with servers running a proprietary backend, but support for different backends might be added in the future. It can also be used to visualize games played by various poker AIs (more on that soon).
+
+## Progress
+
+2019-08-14
+
+![](https://i.imgur.com/hH1Q1it.png)
+
+2019-08-10
+
+![](https://i.imgur.com/gGChJZK.png)
+
+2019-07-31
+
+![](https://i.imgur.com/842wRNF.png)
+
+2019-07-29
+
+![](https://i.imgur.com/dsLydcL.png)
+
+2019-07-27
+
+![](https://i.imgur.com/rfNev4u.png)
 
 ## How to run
 
 ```bash
-npx degit "buka-gaming/viewer" viewer
+npx degit "buhrmi/svelte-poker" viewer
 cd viewer
 npm install # or yarn!
 npm run dev
