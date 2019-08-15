@@ -24,13 +24,4 @@ A poker frontend to try out [Svelte](https://svelte.dev)/[Sapper](https://sapper
 
 ![](https://i.imgur.com/rfNev4u.png)
 
-## How to run
 
-```bash
-npx degit "buhrmi/svelte-poker" viewer
-cd viewer
-npm install # or yarn!
-npm run dev
-```
-
-Open up [localhost:3000](http://localhost:3000) and have fun.
