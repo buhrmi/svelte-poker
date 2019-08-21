@@ -12,7 +12,7 @@
       playerData = await res.json()
     }
     catch (e) {
-      console.log(e.error)
+      console.log(e.message)
     }
 
 	  return { playerData }

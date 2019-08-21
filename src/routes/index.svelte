@@ -8,7 +8,7 @@
 
 <script>
 export let tables;
-
+import { player } from '../stores.js';
 </script>
 
 <style>

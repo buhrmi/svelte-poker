@@ -9,7 +9,7 @@ import pkg from './package.json';
 import autoPreprocess from 'svelte-preprocess'
 
 const mode = process.env.NODE_ENV;
-const api = process.env.API_URL || 'http://buka-buhrmi.dyndns.org'
+const api = process.env.API_URL || 'https://poker-api.serveo.net'
 const dev = mode === 'development';
 
 const onwarn = (warning, onwarn) => (warning.code === 'CIRCULAR_DEPENDENCY' && /[/\\]@sapper[/\\]/.test(warning.message)) || onwarn(warning);

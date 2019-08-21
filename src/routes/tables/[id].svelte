@@ -78,10 +78,15 @@
   let timerStroke = 339.292;
   let chatMessage = '';
   let tab = 'chat';
-  let gameServer = 'ws://buka-benj.dyndns.org:3000'
+  let gameServer = 'wss://puke.serveo.net'
   // let gameServer = 'ws://buka-db.dyndns.org:3000'
   let chatLog = []
   let statusDiv
+
+  // TODO: make these reactive
+  let amountToCall = 0
+  let stackSize = 10
+  let amountToRaise = 0
   
   $: if (chatLog && statusDiv) statusDiv.scrollTop = statusDiv.scrollHeight;
 
@@ -313,9 +318,16 @@
   transition: all 0.3s;
   background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.1) 70%,rgba(0,0,0,0.3) 100%);
 }
-.commands {
-  
+.command_panel {
+  background-color: rgba(0,0,0,0.3);
   text-align: center;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  height: 20%;
+  width: 50%;
+  
+  
 }
 .sidebar {
   z-index: 500;
@@ -451,9 +463,7 @@
   .pot {
 
   }
-  .commands {
-
-  }
+  
 }
 // Narrow styling
 @media screen and (max-width: 520px) {
@@ -614,7 +624,6 @@
   </div>
   
   <div class="table">
-    Acting Player: {tableState.hand && tableState.hand.acting_player}
     {#each Array(tableState.seat_count) as _, index}
       <div class="seat seat_{index} {tableState.seats[index] && tableState.seats[index].seat_state || 'Empty'}">
         {#if tableState.seats[index] && seat(index)}
@@ -675,21 +684,25 @@
         </div>
       </div>
     </div>
-    {#if sitting()}
-      <button on:click={() => standUp()}>Stand Up</button>
-      
-        {#if tableState.hand && mySeatIndex() === tableState.hand.acting_player}
+    <button on:click={() => standUp()}>Stand Up</button>
+    <div class="command_panel">
+      <!-- {#if sitting()} -->
+        <div class="bet_settings">
+          <label>
+            <input type=number bind:value={amountToRaise} min={amountToCall} max={stackSize}>
+            <input type=range bind:value={amountToRaise} min={amountToCall} max={stackSize}>
+          </label>
+        </div>
+        <!-- {#if tableState.hand && mySeatIndex() === tableState.hand.acting_player} -->
           <button on:click={() => fold()}>Fold</button>
-          <button on:click={() => check()}>Check</button>
-          <button on:click={() => call()}>Call</button>
-          <button on:click={() => bet(5)}>Bet 5</button>
-          <button on:click={() => raise(5)}>Raise 5</button>
-        {/if}
-        {#if tableState.seats[mySeatIndex()].seat_state == 'SittingOut'}
+          <button on:click={() => call()}>Call<br>{amountToCall}</button>
+          <button on:click={() => raise()}>Raise To<br>{amountToRaise}</button>
+        <!-- {/if} -->
+        <!-- {#if tableState.seats[mySeatIndex()].seat_state == 'SittingOut'}
           <button on:click={() => sitIn()}>Sit In</button>
-        {/if}
-      
-    {/if}
-    
+        {/if} -->
+        
+      <!-- {/if} -->
+    </div>
   </div>
 </div>
