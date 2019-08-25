@@ -104,22 +104,23 @@
     acting_player: 0,
     dealer: 0
   }
-  // tableState.seat_count = 3
-  // tableState.seats = [{
-  //   seat_state: "SittingOut",
-  //   committed: 0,
-  //   stack: 0,
-  //   player_id: 1},
-  //   {
-  //   seat_state: "SittingOut",
-  //   committed: 0,
-  //   stack: 0,
-  //   player_id: 1},{
-  //   seat_state: "SittingOut",
-  //   committed: 0,
-  //   stack: 0,
-  //   player_id: 1}
-  // ]
+  tableState.seat_count = 3
+  tableState.seats = [{
+    seat_state: "SittingIn",
+    committed: 19933,
+    stack: 24566,
+    player_id: 2},
+    {
+    seat_state: "SittingIn",
+    committed: 19933,
+    stack: 1204,
+    player_id: 1},{
+    seat_state: "SittingIn",
+    committed: 0,
+    stack: 0,
+    player_id: 3}
+  ]
+  lastChatMessages[1] = "YO BITCHES, calling all your shit 😅"
 
   onMount(connect)
   
@@ -183,6 +184,10 @@
       if (element.player_id == $player.id) return index
     }
     return null
+  }
+
+  function mySeat() {
+    tableState.seats[mySeatIndex()]
   }
 
   function sitting() {
@@ -293,7 +298,6 @@
   function raise(amount) {
     socket.send(JSON.stringify({msg: 'raise', amount}))
   }
-  
 
   function sendChat() {
     socket.send(JSON.stringify({msg: 'chat', text: chatMessage}))
@@ -322,11 +326,23 @@
   background-color: rgba(0,0,0,0.3);
   text-align: center;
   position: absolute;
-  right: 0;
-  bottom: 0;
-  height: 20%;
-  width: 50%;
-  
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 20%;
+  padding: 16px;
+  // height: 20%;
+  // width: 50%;
+  .bet_settings {
+    margin-bottom: 12px;
+  }
+  input {
+    vertical-align: middle;
+  }
+  button {
+    height: 35px;
+    width: 90px;
+    vertical-align: middle;
+  }
   
 }
 .sidebar {
@@ -353,6 +369,10 @@
   top: 0;
   right: 0;
   z-index: 501;
+}
+
+.currency {
+  font-size: 0.8em;
 }
 
 .seat {
@@ -387,8 +407,8 @@
     position: absolute;
     text-shadow: 0px 1px 1px rgba(0,0,0,0.5);
     .bubble {
-      bottom: 66px;
-      left: -15px;
+      bottom: 63px;
+      left: -13px;
     }
     .hole {
       .card1, .card2 {
@@ -400,12 +420,12 @@
       .card1 {
         transform: rotate(-5deg);
         left: 65px;
-        top: 33px;
+        top: 35px;
       }
       .card2 {
         transform: rotate(12deg);
         left: 73px;
-        top: 34px;
+        top: 36px;
       }
     }
     .bet {
@@ -413,7 +433,6 @@
       left: 65px;
       top: 65px;
       font-size: 16px;
-      
       white-space: nowrap; 
     }
     .stack {
@@ -638,7 +657,7 @@
               {cachedPlayerData && playerData(tableState.seats[index].player_id).nick}
             </div>
             <div class="stack">
-              {tableState.seats[index].stack}
+              {(tableState.seats[index].stack || 0).toLocaleString()}<span class="currency">元</span>
             </div>
             {#if tableState.seats[index].last_action !== 'F'}
               <div out:fly|local={{duration: 1000, y: 20}} class="hole">
@@ -654,12 +673,18 @@
                 </svg>
               {/if}
             </div>
-            {tableState.seats[index].seat_state}
+            {#if tableState.seats[index].seat_state !== 'SittingIn'}
+              {tableState.seats[index].seat_state}
+            {/if}
             {#if tableState.seats[index].last_action}
               <div class="bet">
-                {actionsPastTense[tableState.seats[index].last_action]} {tableState.seats[index].committed} <Chips amount="{tableState.seats[index].committed}"></Chips>
+                {actionsPastTense[tableState.seats[index].last_action]} {tableState.seats[index].committed}
               </div>
             {/if}
+            <div class="bet">
+              Call: {tableState.seats[index].committed.toLocaleString()}<span class="currency">元</span>
+              <Chips amount="{tableState.seats[index].committed}"></Chips>
+            </div>
           </div>
         {:else}
           {#if !sitting()}
@@ -690,13 +715,13 @@
         <div class="bet_settings">
           <label>
             <input type=number bind:value={amountToRaise} min={amountToCall} max={stackSize}>
-            <input type=range bind:value={amountToRaise} min={amountToCall} max={stackSize}>
+            <input class="bet" type=range bind:value={amountToRaise} min={amountToCall} max={stackSize}>
           </label>
         </div>
         <!-- {#if tableState.hand && mySeatIndex() === tableState.hand.acting_player} -->
           <button on:click={() => fold()}>Fold</button>
-          <button on:click={() => call()}>Call<br>{amountToCall}</button>
-          <button on:click={() => raise()}>Raise To<br>{amountToRaise}</button>
+          <button on:click={() => call()}>Call {amountToCall}</button>
+          <button on:click={() => raise()}>Raise To {amountToRaise}</button>
         <!-- {/if} -->
         <!-- {#if tableState.seats[mySeatIndex()].seat_state == 'SittingOut'}
           <button on:click={() => sitIn()}>Sit In</button>

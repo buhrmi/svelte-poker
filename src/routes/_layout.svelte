@@ -68,7 +68,7 @@ nav {
 <nav>
   <div class="menu">
     {#if segment}
-      <a href="/">⯇ Back to Lobby</a>
+      <a href="/">Tables</a> / BTC Satoshi / Texas Holdem
     {/if}
   </div>
   <div class="player">

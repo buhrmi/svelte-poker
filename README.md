@@ -4,6 +4,10 @@ A poker frontend to try out [Svelte](https://svelte.dev)/[Sapper](https://sapper
 
 ## Progress
 
+2019-08-25
+
+![](https://i.imgur.com/VcdFDch.png)
+
 2019-08-14
 
 ![](https://i.imgur.com/hH1Q1it.png)

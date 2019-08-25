@@ -18,14 +18,15 @@
 
 <style lang="scss">
 .chips {
-  display: block;
-  margin-bottom: 8%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  // margin-bottom: 8%;
   .stack {
-    width: 8%;
-    display: inline-block;
+    max-width: 25%;
     .chip {
       position: relative;
-      margin-bottom: -97%;
+      margin-bottom: -93%;
       img {
         display: block;
         width: 100%;
@@ -39,7 +40,7 @@
   {#each Object.keys(chips) as denomination}
     <div class="stack">
       {#each Array(chips[denomination]) as _, n}
-        <div class="chip"  style="z-index: {10-n}">
+        <div class="chip" style="z-index: {10-n}">
           <img src="/chips/{denomination}.png" alt={denomination}/>
         </div>
       {/each}
