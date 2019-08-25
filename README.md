@@ -1,6 +1,6 @@
 # Svelte Poker [![Deploy to now](https://deploy.now.sh/static/button.svg)](https://deploy.now.sh/?repo=https://github.com/buhrmi/svelte-poker&env=API_URL&env=GAME_SERVER_URL)
 
-A poker frontend built with [Svelte](https://svelte.dev)/[Sapper](https://sapper.svelte.dev). Currently it only connects to a proprietary backend. Support for more backends can be added in the future.
+A poker frontend built with [Svelte](https://svelte.dev)/[Sapper](https://sapper.svelte.dev). Currently in development, not ready for public consumption. Requires proprietary backend (currently not public). Support for more backends might be added in the future.
 
 ## Progress
 
