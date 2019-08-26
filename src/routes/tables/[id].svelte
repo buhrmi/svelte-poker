@@ -56,6 +56,7 @@
   let { session, page } = stores();
   let lastChatMessages = []
   let chatMessagesTimeouts = []
+  let pot;
 
   function displayChatMessage(playerID, message) {
     let playerIndex = getSeatIndexFromID(playerID)
@@ -114,11 +115,12 @@
     seat_state: "SittingIn",
     committed: 19933,
     stack: 1204,
-    player_id: 1},{
-    seat_state: "SittingIn",
-    committed: 0,
-    stack: 0,
-    player_id: 3}
+    player_id: 1}
+    // ,{
+    // seat_state: "SittingIn",
+    // committed: 0,
+    // stack: 0,
+    // player_id: 3}
   ]
   lastChatMessages[1] = "YO BITCHES, calling all your shit 😅"
 
@@ -143,6 +145,28 @@
     }
     requestAnimationFrame(update)
   })
+
+  let chipElements = []
+
+  // TODO: extract this function into a util file
+  // Make all the committed chips fly into the put via CSS transition
+  function playSendToPotAnimation() {
+    const potRect = pot.getBoundingClientRect();
+    const potX = potRect.x + potRect.width / 2;
+    const potY = potRect.y + potRect.height / 2;
+    
+    for (let i = 0; i < chipElements.length; i++) {
+      const element = chipElements[i];
+      const chipRect = element.getBoundingClientRect();
+      const chipX = chipRect.x + chipRect.width / 2;
+      const chipY = chipRect.y + chipRect.height / 2;
+      const style = getComputedStyle(element);
+      const prevX = parseInt(style.left) || 0;
+      const prevY = parseInt(style.top) || 0;
+      element.style.left = `${potX - chipX + prevX}px`;
+      element.style.top = `${potY - chipY + prevY}px`;
+    }
+  }
 
   async function fetchPlayer(playerId) {
     if (typeof window === 'undefined') return
@@ -435,6 +459,13 @@
       font-size: 16px;
       white-space: nowrap; 
     }
+    .chips {
+      position: absolute;
+      transition: all 1s;
+      left: 0px;
+      top: 20px;
+      width: 100%;
+    }
     .stack {
       width: 80%;
       margin: 0 auto;
@@ -683,7 +714,9 @@
             {/if}
             <div class="bet">
               Call: {tableState.seats[index].committed.toLocaleString()}<span class="currency">元</span>
-              <Chips amount="{tableState.seats[index].committed}"></Chips>
+              <div class="chips" bind:this={chipElements[index]}>
+                <Chips {pot} amount="{tableState.seats[index].committed}"></Chips>
+              </div>
             </div>
           </div>
         {:else}
@@ -703,10 +736,11 @@
             <img src="/cards/empty.png" class="card placeholder" alt="Placeholder">
           {/each}
         {/if}
-        <div class="pot">
+        <div class="pot" bind:this={pot}>
           <!-- <Chips amount={tableState.pot}></Chips> -->
           <p>Pot: {Number(tableState.pot).toLocaleString()} Satoshi</p>
         </div>
+        <button on:click={playSendToPotAnimation}>pot animation</button>
       </div>
     </div>
     <button on:click={() => standUp()}>Stand Up</button>

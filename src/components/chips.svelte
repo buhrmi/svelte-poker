@@ -1,7 +1,7 @@
 <script>
   export let amount = 0;
-  
-  let chips = {};
+
+  let stacks = {};
   let denominations = [100000, 50000, 10000, 5000, 1000, 500, 100, 50, 10]
 
   $: {
@@ -12,12 +12,12 @@
       if (result[denomination] == 0) delete result[denomination] 
       remaining = remaining % denomination
     });
-    chips = result
+    stacks = result
   }
 </script>
 
 <style lang="scss">
-.chips {
+.stacks {
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -36,10 +36,10 @@
 }
 </style>
 
-<div class="chips">
-  {#each Object.keys(chips) as denomination}
+<div class="stacks" >
+  {#each Object.keys(stacks) as denomination}
     <div class="stack">
-      {#each Array(chips[denomination]) as _, n}
+      {#each Array(stacks[denomination]) as _, n}
         <div class="chip" style="z-index: {10-n}">
           <img src="/chips/{denomination}.png" alt={denomination}/>
         </div>

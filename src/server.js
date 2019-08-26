@@ -12,7 +12,7 @@ import * as sapper from '@sapper/server';
 //   connectionTimeoutMillis: 2000,
 // })
 
-const { PORT, NODE_ENV } = process.env;
+const { PORT, HOST, NODE_ENV } = process.env;
 const dev = NODE_ENV === 'development';
 
 // Use a database connection from the pool and assign it to the request object
@@ -46,6 +46,6 @@ polka() // You can also use Express
 			})
 		})
 	)
-	.listen(PORT, err => {
+	.listen({port: PORT, host: HOST}, err => {
 		if (err) console.log('error', err);
 	});
