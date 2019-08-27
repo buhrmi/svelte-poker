@@ -169,8 +169,9 @@
   }
 
   async function fetchPlayer(playerId) {
-    if (typeof window === 'undefined') return
-    const res = await fetch(process.env.API_URL+`/players/${playerId}.json`)
+    
+    const res = await fetch(process.env.API_URL+`/players/${playerId}.json`, {mode: 'no-cors'})
+    
     const json = await res.json()
     cachedPlayerData[playerId] = json
   }
