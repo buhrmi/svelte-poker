@@ -9,16 +9,17 @@ import pkg from './package.json';
 import autoPreprocess from 'svelte-preprocess'
 
 const mode = process.env.NODE_ENV;
-const api = process.env.API_URL || 'http://poker:3001'
+const api = process.env.API_URL || 'http://buhrmi-macbook.dyndns.org:3001'
+const gameServer = process.env.GAME_SERVER_URL || 'ws://192.168.43.230:3000'
 const dev = mode === 'development';
 
 const onwarn = (warning, onwarn) => (warning.code === 'CIRCULAR_DEPENDENCY' && /[/\\]@sapper[/\\]/.test(warning.message)) || onwarn(warning);
 const dedupe = importee => importee === 'svelte' || importee.startsWith('svelte/');
 
 const replacements = {
-	'process.browser': false,
 	'process.env.NODE_ENV': JSON.stringify(mode),
-	'process.env.API_URL': JSON.stringify(api)
+	'process.env.API_URL': JSON.stringify(api),
+	'process.env.GAME_SERVER_URL': JSON.stringify(gameServer)
 }
 
 const aliases = {

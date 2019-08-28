@@ -79,17 +79,18 @@
   let timerStroke = 339.292;
   let chatMessage = '';
   let tab = 'chat';
-  let gameServer = 'wss://puke.serveo.net'
-  // let gameServer = 'ws://buka-db.dyndns.org:3000'
+  let gameServer = process.env.GAME_SERVER_URL
   let chatLog = []
   let statusDiv
 
   // TODO: make these reactive
   let amountToCall = 0
   let stackSize = 10
-  let amountToRaise = 0
+  let raiseTo = 0
   
   $: if (chatLog && statusDiv) statusDiv.scrollTop = statusDiv.scrollHeight;
+  $: isMyTurn = tableState.hand && mySeatIndex() === tableState.hand.acting_player
+  $: mySeat = tableState.seats && tableState.seats[mySeatIndex()]
 
   let chatInput
   let currency = 'BTC'
@@ -122,7 +123,7 @@
     // stack: 0,
     // player_id: 3}
   ]
-  lastChatMessages[1] = "YO BITCHES, calling all your shit 😅"
+  // lastChatMessages[1] = "YO BITCHES, calling all your shit 😅"
 
   onMount(connect)
   
@@ -169,9 +170,8 @@
   }
 
   async function fetchPlayer(playerId) {
-    
-    const res = await fetch(process.env.API_URL+`/players/${playerId}.json`, {mode: 'no-cors'})
-    
+    if (typeof window == 'undefined') return
+    const res = await fetch(process.env.API_URL+`/players/${playerId}.json`)
     const json = await res.json()
     cachedPlayerData[playerId] = json
   }
@@ -211,9 +211,6 @@
     return null
   }
 
-  function mySeat() {
-    tableState.seats[mySeatIndex()]
-  }
 
   function sitting() {
     return mySeatIndex() !== null;
@@ -263,6 +260,9 @@
           timeOut = new Date().getTime() + 12000 // data.hand.timeout
           timerStart = new Date().getTime()
         }
+        if (data.hand && data.hand.minraise_to) {
+          raiseTo = data.hand.minraise_to
+        }
       }
       if (data.echo && data.echo.message) {
         const echoMessage = JSON.parse(data.echo.message);
@@ -270,11 +270,7 @@
         if (data.echo.player_id == $player.id && echoMessage.msg == 'stand-up') player.reload()
         chatLog.push({from: data.echo.player_id, text: echoMessage.msg})
         chatLog = chatLog
-        if (echoMessage.msg == 'fold') {
-          let actorSeat = tableState.seats[getSeatIndexFromID(data.echo.player_id)];
-          let text = actionsPastTense[tableState.seats[index].last_action] + ' ' + tableState.seats[index].committed
-          chatLog.push({from: data.echo.player_id, type: 'action', text})
-        }
+        
       }
 
       if (data.msg == "chat") {
@@ -512,7 +508,8 @@
     }
   }
   .pot {
-
+    margin: 0 auto;
+    max-width: 25%;
   }
   
 }
@@ -710,15 +707,16 @@
             {/if}
             {#if tableState.seats[index].last_action}
               <div class="bet">
-                {actionsPastTense[tableState.seats[index].last_action]} {tableState.seats[index].committed}
+                {actionsPastTense[tableState.seats[index].last_action]}
+                {#if tableState.seats[index].committed > 0}
+                  {tableState.seats[index].committed.toLocaleString()}<span class="currency">元</span>
+                {/if}
+                <div class="chips" bind:this={chipElements[index]}>
+                  <Chips amount="{tableState.seats[index].committed}"></Chips>
+                </div>
               </div>
             {/if}
-            <div class="bet">
-              Call: {tableState.seats[index].committed.toLocaleString()}<span class="currency">元</span>
-              <div class="chips" bind:this={chipElements[index]}>
-                <Chips {pot} amount="{tableState.seats[index].committed}"></Chips>
-              </div>
-            </div>
+            
           </div>
         {:else}
           {#if !sitting()}
@@ -737,9 +735,10 @@
             <img src="/cards/empty.png" class="card placeholder" alt="Placeholder">
           {/each}
         {/if}
+
         <div class="pot" bind:this={pot}>
-          <!-- <Chips amount={tableState.pot}></Chips> -->
-          <p>Pot: {Number(tableState.pot).toLocaleString()} Satoshi</p>
+          <p>Pot: {Number(tableState.hand && tableState.hand.amount_gathered || 0).toLocaleString()} Satoshi</p>
+          <Chips amount={tableState.hand && tableState.hand.amount_gathered || 0}></Chips>
         </div>
         <button on:click={playSendToPotAnimation}>pot animation</button>
       </div>
@@ -749,15 +748,23 @@
       <!-- {#if sitting()} -->
         <div class="bet_settings">
           <label>
-            <input type=number bind:value={amountToRaise} min={amountToCall} max={stackSize}>
-            <input class="bet" type=range bind:value={amountToRaise} min={amountToCall} max={stackSize}>
+            <input type=number bind:value={raiseTo} min={tableState.hand && tableState.hand.minraise_to} max={mySeat && mySeat.stack}>
+            <input class="bet" type=range bind:value={raiseTo} min={tableState.hand && tableState.hand.minraise_to} max={mySeat && mySeat.stack}>
           </label>
         </div>
         <!-- {#if tableState.hand && mySeatIndex() === tableState.hand.acting_player} -->
-          <button on:click={() => fold()}>Fold</button>
-          <button on:click={() => call()}>Call {amountToCall}</button>
-          <button on:click={() => raise()}>Raise To {amountToRaise}</button>
-        <!-- {/if} -->
+          <button on:click={() => fold()} disabled={!isMyTurn}>Fold</button>
+          {#if tableState.hand && mySeat && tableState.hand.max_commitment == mySeat.committed}
+            <button on:click={() => check()} disabled={!isMyTurn}>Check</button>
+          {:else}
+            <button on:click={() => call()} disabled={!isMyTurn}>Call {tableState.hand && tableState.hand.max_commitment}</button>
+          {/if}
+          {#if tableState.hand && tableState.hand.max_commitment == 0}
+            <button on:click={() => bet(raiseTo)} disabled={!isMyTurn}>Bet {raiseTo}</button>
+          {:else}
+            <button on:click={() => raise(raiseTo)} disabled={!isMyTurn}>Raise To {raiseTo}</button>
+          {/if}
+          <!-- {/if} -->
         <!-- {#if tableState.seats[mySeatIndex()].seat_state == 'SittingOut'}
           <button on:click={() => sitIn()}>Sit In</button>
         {/if} -->
