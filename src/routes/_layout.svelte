@@ -75,7 +75,7 @@ nav {
     {#if $player}
       {$player.nick}
       <img src="{$player.profile_pic}" alt="" class="profile_pic">
-      <a href="#" on:click={() => showDeposits ^= true}>Balance (BTC): {$player.balances.BTC} Satoshi</a>
+      <div on:click={() => showDeposits ^= true}>Balance (BTC): {$player.balances.BTC} Satoshi</div>
     {:else}
       <a href={process.env.API_URL}>Sign up / Log In</a>
     {/if}

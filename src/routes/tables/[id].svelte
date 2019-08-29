@@ -7,23 +7,39 @@
   import { quintOut } from 'svelte/easing';
 	import { crossfade } from 'svelte/transition';
 
-  function dealCardTransition() {
-    console.log('dealing')
-    let dealDelay = 0
-    const transform = ''
-    return {
-      delay: dealDelay,
-      duration: 300,
-      easing: quintOut,
-      css: t => `
-					transform: ${transform} scale(${t});
-					opacity: ${t}
-				`
-    }
-  }
+  let dealt;
+  let dealDelay;
+  $: if (dealt) dealDelay = 0;
 
-  function dealCards() {
-    
+  onMount(function() {
+    setInterval(function() {dealt ^= true}, 3000)
+    dealt = true
+  })
+
+  // A svelte transition that simulates cards being "dealt"
+  function dealTransition(node, {rotate, card}) {
+    const style = getComputedStyle(node);
+    const transform = style.transform === 'none' ? '' : style.transform;
+    const fromX = 300
+    const fromY = 300
+    const targetRect = node.getBoundingClientRect()
+    const deltaX = fromX - targetRect.left;
+    const deltaY = fromY - targetRect.top;
+    const playersSittingIn = getSeatsSittingIn().length;
+    const timeBetweenCards = 100
+    const delay =  dealDelay + (card - 1) * (playersSittingIn) * timeBetweenCards
+    const transition = {
+      delay,
+      duration: 1000,
+      easing: quintOut,
+      css: t => {
+        return `
+          transform: translate(${deltaX*(1-t)}px, ${deltaY*(1-t)}px) rotate(${rotate * t}deg);
+        `
+      }
+    }
+    if (card == 2) dealDelay += timeBetweenCards;
+    return transition;
   }
 
   const actionsPastTense = {
@@ -87,7 +103,8 @@
   let amountToCall = 0
   let stackSize = 10
   let raiseTo = 0
-  
+  let isDealt = []
+
   $: if (chatLog && statusDiv) statusDiv.scrollTop = statusDiv.scrollHeight;
   $: isMyTurn = tableState.hand && mySeatIndex() === tableState.hand.acting_player
   $: mySeat = tableState.seats && tableState.seats[mySeatIndex()]
@@ -106,7 +123,7 @@
     acting_player: 0,
     dealer: 0
   }
-  tableState.seat_count = 3
+  tableState.seat_count = 6
   tableState.seats = [{
     seat_state: "SittingIn",
     committed: 19933,
@@ -117,34 +134,43 @@
     committed: 19933,
     stack: 1204,
     player_id: 1}
-    // ,{
-    // seat_state: "SittingIn",
-    // committed: 0,
-    // stack: 0,
-    // player_id: 3}
+    ,{
+    seat_state: "SittingIn",
+    committed: 0,
+    stack: 0,
+    player_id: 1}
+    ,{
+    seat_state: "SittingIn",
+    committed: 0,
+    stack: 0,
+    player_id: 1}
+    ,{
+    seat_state: "SittingIn",
+    committed: 0,
+    stack: 0,
+    player_id: 1}
+    ,{
+    seat_state: "SittingIn",
+    committed: 0,
+    stack: 0,
+    player_id: 1}
   ]
   // lastChatMessages[1] = "YO BITCHES, calling all your shit 😅"
 
   onMount(connect)
-  
+
   let timeOut = new Date().getTime() + 12000
   let timerStart = new Date().getTime()
   onMount(function() {
-    function update() {
+    let current = 0
+ 
+
+    function updateTimeoutBar() {
       let ratio = (new Date().getTime() - timerStart) / (timeOut - timerStart)
       timerStroke = 2 * 3.141 * 22 * (1-ratio)
-      requestAnimationFrame(update)
-      if (ratio > 1) {
-        // timeOut = new Date().getTime() + 12000
-        // timerStart = new Date().getTime()
-        // tableState.dealer ++
-        // tableState.acting_player ++
-        // if (tableState.dealer >= tableState.seats.length) tableState.dealer = 0
-        // if (tableState.acting_player >= tableState.seats.length) tableState.acting_player = 0
-      }
-      
+      requestAnimationFrame(updateTimeoutBar)
     }
-    requestAnimationFrame(update)
+    requestAnimationFrame(updateTimeoutBar)
   })
 
   let chipElements = []
@@ -167,6 +193,15 @@
       element.style.left = `${potX - chipX + prevX}px`;
       element.style.top = `${potY - chipY + prevY}px`;
     }
+  }
+
+  function getSeatsSittingIn() {
+    const result = []
+    for (let index = 0; index < tableState.seats.length; index++) {
+      const seat = tableState.seats[index];
+      if (seat.seat_state == 'SittingIn') result.push(seat)
+    }
+    return result
   }
 
   async function fetchPlayer(playerId) {
@@ -539,9 +574,6 @@
   max-height: 30%;
   overflow-y: auto;
   .log {
-    &.action {
-      font-style: italic;
-    }
     img {
       border-radius: 12px;
       width: 14px;
@@ -615,10 +647,10 @@
     <p class="log" class:type={log.type}>
       {#if log.from}
         {#if log.type == 'action'}
-          <img src={cachedPlayerData && playerData(log.from).profile_pic}>
+          <img alt="" src={cachedPlayerData && playerData(log.from).profile_pic}>
           <span>{cachedPlayerData && playerData(log.from).nick} {log.text}</span>
         {:else}
-          <img src={cachedPlayerData && playerData(log.from).profile_pic}>
+          <img alt="" src={cachedPlayerData && playerData(log.from).profile_pic}>
           <span>{cachedPlayerData && playerData(log.from).nick}: {log.text}</span>
         {/if}
       {:else}
@@ -690,11 +722,13 @@
             </div>
             {#if tableState.seats[index].last_action !== 'F'}
               <div out:fly|local={{duration: 1000, y: 20}} class="hole">
-                <img class="card1" alt="Card" src="/cards/back.png">
-                <img class="card2" alt="Card" src="/cards/back.png">
+                {#if dealt}
+                  <img in:dealTransition={{rotate: -5, card: 1}} class="card1" alt="Card" src="/cards/back.png">
+                  <img in:dealTransition={{rotate: 12, card: 2}} class="card2" alt="Card" src="/cards/back.png">
+                {/if}
               </div>
             {/if}
-            <div class="image">
+            <div class="image"  on:click={() => dealt ^= true}>
               <img alt="" class="profile_pic" src="{cachedPlayerData && playerData(tableState.seats[index].player_id).profile_pic}">
               {#if tableState.hand && tableState.hand.acting_player == index}
                 <svg width="48" height="48" viewBox="0 0 48 48">
