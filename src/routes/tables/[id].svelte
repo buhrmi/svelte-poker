@@ -7,6 +7,7 @@
   import { quintOut } from 'svelte/easing';
 	import { crossfade } from 'svelte/transition';
 
+  let mycards = ['As', 'Kh']
   let dealt;
   let dealDelay;
   $: if (dealt) dealDelay = 0;
@@ -299,6 +300,9 @@
           raiseTo = data.hand.minraise_to
         }
       }
+      if (data.msg == 'holecards') {
+        mycards = data.value;
+      }
       if (data.echo && data.echo.message) {
         const echoMessage = JSON.parse(data.echo.message);
         if (data.echo.player_id == $player.id && echoMessage.msg == 'bring-in') player.reload()
@@ -390,6 +394,9 @@
   // width: 50%;
   .bet_settings {
     margin-bottom: 12px;
+  }
+  .card1, .card2 {
+    width: 10%;
   }
   input {
     vertical-align: middle;
@@ -723,8 +730,13 @@
             {#if tableState.seats[index].last_action !== 'F'}
               <div out:fly|local={{duration: 1000, y: 20}} class="hole">
                 {#if dealt}
-                  <img in:dealTransition={{rotate: -5, card: 1}} class="card1" alt="Card" src="/cards/back.png">
-                  <img in:dealTransition={{rotate: 12, card: 2}} class="card2" alt="Card" src="/cards/back.png">
+                  {#if mySeatIndex() == index && mycards}
+                    <img in:dealTransition={{rotate: -5, card: 1}} class="card1" alt="Card" src="/cards/{mycards[0]}.png">
+                    <img in:dealTransition={{rotate: 12, card: 2}} class="card2" alt="Card" src="/cards/{mycards[1]}.png">
+                  {:else}
+                    <img in:dealTransition={{rotate: -5, card: 1}} class="card1" alt="Card" src="/cards/back.png">
+                    <img in:dealTransition={{rotate: 12, card: 2}} class="card2" alt="Card" src="/cards/back.png">
+                  {/if}
                 {/if}
               </div>
             {/if}
@@ -782,6 +794,9 @@
       <!-- {#if sitting()} -->
         <div class="bet_settings">
           <label>
+            {#each mycards as card}
+              <img in:fly={{y: -20}} class="card1" alt="Card" src="/cards/{card}.png">
+            {/each}          
             <input type=number bind:value={raiseTo} min={tableState.hand && tableState.hand.minraise_to} max={mySeat && mySeat.stack}>
             <input class="bet" type=range bind:value={raiseTo} min={tableState.hand && tableState.hand.minraise_to} max={mySeat && mySeat.stack}>
           </label>
