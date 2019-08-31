@@ -9,26 +9,40 @@
 
   let mycards = ['As', 'Kh']
   let dealt;
-  let dealDelay;
-  $: if (dealt) dealDelay = 0;
 
   onMount(function() {
-    setInterval(function() {dealt ^= true}, 3000)
+    setInterval(function() {
+      dealt ^= true
+      if (!dealt) tableState.hand.button_seat++
+    }, 3000)
     dealt = true
   })
 
   // A svelte transition that simulates cards being "dealt"
-  function dealTransition(node, {rotate, card}) {
+  function dealTransition(node, {rotate, card, seat}) {
     const style = getComputedStyle(node);
     const transform = style.transform === 'none' ? '' : style.transform;
-    const fromX = 300
-    const fromY = 300
+    const dealingSeat = seatElements[tableState.hand.button_seat]
+    const fromRect = dealingSeat.getBoundingClientRect()
+    const fromX = fromRect.left + 28
+    const fromY = fromRect.top + 60
     const targetRect = node.getBoundingClientRect()
     const deltaX = fromX - targetRect.left;
     const deltaY = fromY - targetRect.top;
-    const playersSittingIn = getSeatsSittingIn().length;
+    const seatsSittingIn = []
     const timeBetweenCards = 100
-    const delay =  dealDelay + (card - 1) * (playersSittingIn) * timeBetweenCards
+    for (let index = 0; index < tableState.seats.length; index++) {
+      if (tableState.seats[index].seat_state == 'SittingIn') seatsSittingIn.push(index)
+    }
+    while(seatsSittingIn[0] !== tableState.hand.button_seat) {
+      seatsSittingIn.push(seatsSittingIn.shift())
+    }
+    seatsSittingIn.push(seatsSittingIn.shift())
+    
+    // seatsSittingIn is now in the correct "dealing order"
+    let delay = seatsSittingIn.indexOf(seat) * timeBetweenCards
+    if (card == 2) delay += seatsSittingIn.length * timeBetweenCards
+
     const transition = {
       delay,
       duration: 1000,
@@ -39,7 +53,6 @@
         `
       }
     }
-    if (card == 2) dealDelay += timeBetweenCards;
     return transition;
   }
 
@@ -74,6 +87,7 @@
   let lastChatMessages = []
   let chatMessagesTimeouts = []
   let pot;
+  let seatElements = []
 
   function displayChatMessage(playerID, message) {
     let playerIndex = getSeatIndexFromID(playerID)
@@ -118,6 +132,7 @@
     seat_count: 0,
     seats: [],
     hand: {
+      button_seat: 0,
       board: []
     },
     pot: 0,
@@ -712,7 +727,7 @@
   
   <div class="table">
     {#each Array(tableState.seat_count) as _, index}
-      <div class="seat seat_{index} {tableState.seats[index] && tableState.seats[index].seat_state || 'Empty'}">
+      <div bind:this={seatElements[index]} class="seat seat_{index} {tableState.seats[index] && tableState.seats[index].seat_state || 'Empty'}">
         {#if tableState.seats[index] && seat(index)}
           {#if tableState.hand && tableState.hand.button_seat == index}
             <div class="dealer" in:receive={'dealer'} out:send={'dealer'}>DEALER</div>
@@ -731,11 +746,11 @@
               <div out:fly|local={{duration: 1000, y: 20}} class="hole">
                 {#if dealt}
                   {#if mySeatIndex() == index && mycards}
-                    <img in:dealTransition={{rotate: -5, card: 1}} class="card1" alt="Card" src="/cards/{mycards[0]}.png">
-                    <img in:dealTransition={{rotate: 12, card: 2}} class="card2" alt="Card" src="/cards/{mycards[1]}.png">
+                    <img in:dealTransition={{rotate: -5, card: 1, seat: index}} class="card1" alt="Card" src="/cards/{mycards[0]}.png">
+                    <img in:dealTransition={{rotate: 12, card: 2, seat: index}} class="card2" alt="Card" src="/cards/{mycards[1]}.png">
                   {:else}
-                    <img in:dealTransition={{rotate: -5, card: 1}} class="card1" alt="Card" src="/cards/back.png">
-                    <img in:dealTransition={{rotate: 12, card: 2}} class="card2" alt="Card" src="/cards/back.png">
+                    <img in:dealTransition={{rotate: -5, card: 1, seat: index}} class="card1" alt="Card" src="/cards/back.png">
+                    <img in:dealTransition={{rotate: 12, card: 2, seat: index}} class="card2" alt="Card" src="/cards/back.png">
                   {/if}
                 {/if}
               </div>
@@ -798,7 +813,9 @@
               <img in:fly={{y: -20}} class="card1" alt="Card" src="/cards/{card}.png">
             {/each}          
             <input type=number bind:value={raiseTo} min={tableState.hand && tableState.hand.minraise_to} max={mySeat && mySeat.stack}>
+            <!-- <button on:click={() => raiseTo = tableState.hand && tableState.hand.minraise_to}>Min</button> -->
             <input class="bet" type=range bind:value={raiseTo} min={tableState.hand && tableState.hand.minraise_to} max={mySeat && mySeat.stack}>
+            <!-- <button on:click={() => raiseTo = mySeat && mySeat.stack}>Max</button> -->
           </label>
         </div>
         <!-- {#if tableState.hand && mySeatIndex() === tableState.hand.acting_player} -->
