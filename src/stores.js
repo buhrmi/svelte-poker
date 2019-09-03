@@ -11,4 +11,8 @@ player.reload = async function() {
   player.set(json);
 }
 
+if (typeof window !== 'undefined') {
+  setInterval(player.reload, 10000)
+}
+
 export { player };
