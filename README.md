@@ -18,6 +18,10 @@ or
 
 ## Progress
 
+2019-09-03
+
+![](https://i.imgur.com/SDdIFFL.gif)
+
 2019-08-25
 
 ![](https://i.imgur.com/VcdFDch.png)
