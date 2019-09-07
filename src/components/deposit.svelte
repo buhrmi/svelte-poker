@@ -1,6 +1,8 @@
 <script>
+import { onDestroy } from 'svelte';
 export let player;
 
+let interval
 async function fakeDeposit() {
   let url = process.env.API_URL+'/deposits'
   const res = await fetch(url, {
@@ -12,8 +14,13 @@ async function fakeDeposit() {
 }
 
 if (typeof window !== 'undefined') {
-  setInterval(() => player.reload({scan_deposits: true}), 5000)
+  interval = setInterval(() => player.reload({scan_deposits: true}), 5000)
 }
+
+onDestroy(() => {
+  clearInterval(interval)
+})
+
 </script>
 
 <h1>Top Up</h1>

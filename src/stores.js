@@ -2,10 +2,18 @@ import {writable} from 'svelte/store';
 
 const player = writable({})
 
-player.reload = async function() {
+player.reload = async function(params) {
+  
   let url = process.env.API_URL+'/me.json'
+  if (params) {
+    url += '?'
+    for (const param in params) {
+      const value = params[param]
+      url += param + '=' + encodeURIComponent(value)
+    }
+  }
   const res = await fetch(url, {
-    credentials: 'include'
+    credentials: 'include',
   })
   const json = await res.json()
   player.set(json);

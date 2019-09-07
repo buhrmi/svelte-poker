@@ -4,7 +4,7 @@
   import { onDestroy, tick, onMount } from 'svelte';
   import { stores } from '@sapper/app';
   import { fly, fade } from 'svelte/transition';
-  import { quintOut } from 'svelte/easing';
+  import { quintOut, cubicOut } from 'svelte/easing';
 	import { crossfade } from 'svelte/transition';
   import { writable } from "svelte/store";
 
@@ -87,6 +87,7 @@
 
     return {
       duration: 1000,
+      easing: cubicOut,
       css: t => {
         return `
           transform: translate(${deltaX*(1-t)}px, ${deltaY*(1-t)}px);
@@ -167,7 +168,7 @@
   let chatInput
   let currency = 'BTC'
   let historyDiv
-  let  connectionString = `${gameServer}?table_id=${tableId}`
+  let connectionString = `${gameServer}?table_id=${tableId}`
   if (accessToken) connectionString += `&access_token=${accessToken}`
     
   let tableState = {};
@@ -183,51 +184,58 @@
     acting_player: 0,
     dealer: 0
   }
-  tableState.seat_count = 6
-  tableState.seats = [{
-    seat_state: "SittingIn",
-    committed: 19933,
-    stack: 24566,
-    player_id: 2},
-    {
-    seat_state: "SittingIn",
-    committed: 19933,
-    stack: 1204,
-    player_id: 1}
-    ,{
-    seat_state: "SittingIn",
-    committed: 0,
-    stack: 0,
-    player_id: 1}
-    ,{
-    seat_state: "SittingIn",
-    committed: 0,
-    stack: 0,
-    player_id: 1}
-    ,{
-    seat_state: "SittingIn",
-    committed: 0,
-    stack: 0,
-    player_id: 1}
-    ,{
-    seat_state: "SittingIn",
-    committed: 0,
-    stack: 0,
-    player_id: 1}
-  ]
-  mycards = ['as', 'kh']
-  
-  onMount(function() {
-    setInterval(function() {
-      cardsDealt = false
-      tick().then(() => cardsDealt = true)
-      if (!cardsDealt) tableState.hand.button_seat++
-      if (tableState.hand.button_seat > 5) tableState.hand.button_seat = 0
-    }, 3000)
-    cardsDealt = true
-  })
-  // lastChatMessages[1] = "YO BITCHES, calling all your shit 😅"
 
+  if (true) {
+    tableState.hand.involved_players = [0,1,2,3,4]
+    tableState.seat_count = 6
+    tableState.seats = [{
+      seat_state: "SittingIn",
+      committed: 19933,
+      stack: 24566,
+      player_id: 2},
+      {
+      seat_state: "SittingIn",
+      committed: 19933,
+      stack: 1204,
+      player_id: 1}
+      ,{
+      seat_state: "SittingIn",
+      committed: 0,
+      stack: 0,
+      player_id: 1}
+      ,{
+      seat_state: "SittingIn",
+      committed: 0,
+      stack: 0,
+      player_id: 1}
+      ,{
+      seat_state: "SittingIn",
+      committed: 0,
+      stack: 0,
+      player_id: 1}
+      ,{
+      seat_state: "SittingIn",
+      committed: 0,
+      stack: 0,
+      player_id: 1}
+    ]
+    mycards = ['as', 'kh']
+
+    onMount(function() {
+      setInterval(function() {
+        cardsDealt = false
+        if (tableState.seats[1].committed == 0) tableState.seats[1].committed = 3000
+        else tableState.seats[1].committed = 0
+        tick().then(() => cardsDealt = true)
+        if (!cardsDealt) tableState.hand.button_seat++
+        if (tableState.hand.button_seat > 5) tableState.hand.button_seat = 0
+      }, 3000)
+      cardsDealt = true
+    })
+    lastChatMessages[1] = "YO BITCHES, calling all your shit 😅"
+  }
+
+  
   onMount(connect)
 
   let timeOut = new Date().getTime() + 12000
@@ -327,9 +335,6 @@
   }
 
   function connect() {
-
-    
-
     connecting = true
     socket = new WebSocket(connectionString);
     chatLog.push({text: "Connecting... Please wait ⌛"})
@@ -749,7 +754,7 @@
             <div class="stack">
               {(tableState.seats[index].stack || 0).toLocaleString()}<span class="currency">元</span>
             </div>
-            {#if tableState.hand && tableState.hand.folded_players.indexOf(index) == -1}
+            {#if tableState.hand && tableState.hand.folded_players.indexOf(index) == -1 && tableState.hand.involved_players.indexOf(index) !== -1}
               <div out:fly|local={{duration: 1000, y: 20}} class="hole">
                 {#if cardsDealt && mySeatIndex() == index && mycards}
                   <img in:dealTransition|local={{rotate: -5, card: 1, seat: index}} style="width: {$settings.cardSize}px" class="card1" alt="Card" src="/cards/{mycards[0].toLowerCase()}.png">
@@ -771,18 +776,17 @@
             {#if tableState.seats[index].seat_state !== 'SittingIn'}
               {tableState.seats[index].seat_state}
             {/if}
-            {#if tableState.seats[index].last_action}
-              <div class="bet">
+            <div class="bet" style="top: {$settings.cardSize * 1.4 + 34}px">
+              {#if tableState.seats[index].last_action}
                 {actionsPastTense[tableState.seats[index].last_action]}
-                {#if tableState.seats[index].committed > 0}
-                  {tableState.seats[index].committed.toLocaleString()}<span class="currency">元</span>
-                  <div out:flyIntoPotTransition|local class="chips" bind:this={chipElements[index]}>
-                    <Chips amount="{tableState.seats[index].committed}"></Chips>
-                  </div>
-                {/if}
-              </div>
-            {/if}
-            
+              {/if}
+              {#if tableState.seats[index].committed > 0}
+                {tableState.seats[index].committed.toLocaleString()}<span class="currency">元</span>
+                <div out:flyIntoPotTransition|local class="chips" bind:this={chipElements[index]}>
+                  <Chips amount="{tableState.seats[index].committed}"></Chips>
+                </div>
+              {/if}
+            </div>
           </div>
         {:else}
           {#if !sitting()}
