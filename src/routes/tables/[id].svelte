@@ -39,7 +39,7 @@
     const deltaX = fromX - targetRect.left;
     const deltaY = fromY - targetRect.top;
     const seatsSittingIn = []
-    const timeBetweenCards = 160
+    const timeBetweenCards = 100
     for (let index = 0; index < tableState.seats.length; index++) {
       if (tableState.seats[index].seat_state == 'SittingIn') seatsSittingIn.push(index)
     }
@@ -49,17 +49,17 @@
     seatsSittingIn.push(seatsSittingIn.shift())
     
     // seatsSittingIn is now in the correct "dealing order"
-    let delay = seatsSittingIn.indexOf(seat) * timeBetweenCards
+    let delay = 300 + seatsSittingIn.indexOf(seat) * timeBetweenCards
     if (card == 2) delay += seatsSittingIn.length * timeBetweenCards
 
     const transition = {
       delay,
-      duration: 1200,
+      duration: 1500,
       easing: quintOut,
       css: t => {
         return `
           transform: translate(${deltaX*(1-t)}px, ${deltaY*(1-t)}px) rotate(${rotate * Math.pow(t, 80)}deg) scale(${0.8 + (t / 5)});
-          z-index: ${t < 0.2 ? 10000-delay : 3};
+          z-index: ${t < 0.7 ? 10000-delay : 3};
         `
       }
     }
@@ -186,6 +186,7 @@
   }
 
   if (true) {
+    chatLog.push({from: 1, type: 'action', text: 'shows <b span="card">Qs</b>'})
     tableState.hand.involved_players = [0,1,2,3,4]
     tableState.seat_count = 6
     tableState.seats = [{
@@ -396,7 +397,7 @@
           }
           for (const playerId in sidepot) {
             const amount = sidepot[playerId];
-            const text = data.holecards[playerId] ? `wins ${amount} with ${data.holecards[playerId]}` : `remains and takes ${amount}`
+            const text = data.holecards[playerId] ? `wins ${amount} with ${data.holecards[playerId]}` : `takes ${amount}`
             chatLog.push({from: playerId, text, type: 'action'}) 
           }
         }
@@ -476,9 +477,9 @@
   background-color: rgba(0,0,0,0.3);
   text-align: center;
   position: absolute;
-  right: 5%;
+  right: 0%;
   // transform: translateX(-50%);
-  bottom: 5%;
+  bottom: 0%;
   padding: 16px;
   max-width: 50%;
   // height: 20%;
@@ -708,7 +709,7 @@
       {#if log.from}
         {#if log.type == 'action'}
           <img alt="" src={cachedPlayerData && playerData(log.from).profile_pic}>
-          <span>{cachedPlayerData && playerData(log.from).nick} {log.text}</span>
+          <span>{cachedPlayerData && playerData(log.from).nick} {@html log.text}</span>
         {:else}
           <img alt="" src={cachedPlayerData && playerData(log.from).profile_pic}>
           <span>{cachedPlayerData && playerData(log.from).nick}: {log.text}</span>

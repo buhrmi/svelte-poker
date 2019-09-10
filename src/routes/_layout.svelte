@@ -25,12 +25,15 @@
 
   import { stores } from '@sapper/app';
   import { player } from '../stores.js';
+
   import Modal from '../components/modal.svelte';
   import Deposit from '../components/deposit.svelte';
+  import Withdrawals from '../components/withdrawals.svelte';
 
-	let showDeposits = false;
-  let page = stores.page
+	let showDashboard = false;
+  let {page} = stores()
 
+  let hideNav = $page.query.hideNav;
   $player = playerData;
   
   let { session } = stores();
@@ -65,27 +68,32 @@ nav {
 }
 </style>
 
-<nav>
-  <div class="menu">
-    {#if segment}
-      <a href="/">Tables</a> / BTC Satoshi / Texas Holdem
-    {/if}
-  </div>
-  <div class="player">
-    {#if $player}
-      {$player.nick}
-      <img src="{$player.profile_pic}" alt="" class="profile_pic">
-      <div on:click={() => showDeposits ^= true}>Balance (BTC): {$player.balances.BTC} Satoshi</div>
-    {:else}
-      <a href={process.env.API_URL}>Sign up / Log In</a>
-    {/if}
-  </div>
-</nav>
+{#if !hideNav}
+  <nav>
+    <div class="menu">
+      {#if segment}
+        <a href="/">Tables</a> / BTC Satoshi / Texas Holdem
+      {/if}
+    </div>
+    <div class="player">
+      {#if $player}
+        <div on:click={() => showDashboard ^= true}>
+          {$player.nick}
+          <img src="{$player.profile_pic}" alt="" class="profile_pic">
+          Balance (BTC): {$player.balances.BTC.toLocaleString()} Satoshi
+        </div>
+      {:else}
+        <a href={process.env.API_URL}>Sign up / Log In</a>
+      {/if}
+    </div>
+  </nav>
+{/if}
 
 <slot></slot>
 
-{#if showDeposits}
-	<Modal on:close="{() => showDeposits = false}">
-    <Deposit player={player}></Deposit>
+{#if showDashboard}
+	<Modal on:close="{() => showDashboard = false}">
+    <Deposit></Deposit>
+    <Withdrawals></Withdrawals>
 	</Modal>
 {/if}
