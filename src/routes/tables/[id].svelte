@@ -24,14 +24,14 @@
 
   let oldButtonSeatIndex;
   let cardsDealt;
-  let mycards = []
+  let myCards = []
 
 
   // A svelte transition that simulates cards being "cardsDealt"
   function dealTransition(node, {rotate, card, seat}) {
     const style = getComputedStyle(node);
     const transform = style.transform === 'none' ? '' : style.transform;
-    const dealingSeat = seatElements[tableState.hand.button_seat]
+    const dealingSeat = seatElements[handState.dealer.seat]
     const fromRect = dealingSeat.getBoundingClientRect()
     const fromX = fromRect.left + 32 - $settings.cardSize / 2.0
     const fromY = fromRect.top + 16
@@ -41,9 +41,9 @@
     const seatsSittingIn = []
     const timeBetweenCards = 100
     for (let index = 0; index < tableState.seats.length; index++) {
-      if (tableState.seats[index].seat_state == 'SittingIn') seatsSittingIn.push(index)
+      if (tableState.seats[index].sitting_in) seatsSittingIn.push(index)
     }
-    while(seatsSittingIn[0] !== tableState.hand.button_seat) {
+    while(seatsSittingIn[0] !== handState.dealer.seat) {
       seatsSittingIn.push(seatsSittingIn.shift())
     }
     seatsSittingIn.push(seatsSittingIn.shift())
@@ -67,7 +67,7 @@
   }
 
   // TODO: extract this function into a util file
-  // Make all the committed chips fly into the put via CSS transition
+  // Make all the heap chips fly into the put via CSS transition
   function flyIntoPotTransition(node) {
     const potRect = pot.getBoundingClientRect();
     const potX = potRect.x + potRect.width / 2;
@@ -160,11 +160,23 @@
   let stackSize = 10
   let raiseTo = 0
   let isDealt = []
+  let c = 0
+  let mySeatIndex;
 
   $: if (chatLog && statusDiv) statusDiv.scrollTop = statusDiv.scrollHeight;
-  $: isMyTurn = tableState.hand && mySeatIndex() === tableState.hand.acting_player
-  $: mySeat = tableState.seats && tableState.seats[mySeatIndex()]
-
+  
+  $: isMyTurn = mySeatIndex === handState.action_at.seat
+  $: mySeat = tableState.seats && tableState.seats[mySeatIndex]
+  $: sittingIn = ++c && mySeat && mySeat.sitting_in
+  $: participatingSeats = handState && handState.participants.map((p) => p.seat)
+  $: {
+    if ($player) {
+      for (let index = 0; index < tableState.seats.length; index++) {
+        const element = tableState.seats[index];
+        if (element.player_id == $player.id) mySeatIndex = index
+      }
+    }
+  }
   let chatInput
   let currency = 'BTC'
   let historyDiv
@@ -172,64 +184,62 @@
   if (accessToken) connectionString += `&access_token=${accessToken}`
     
   let tableState = {};
+  let handState = {
+    participants: [],
+    action_at: {}
+  }
   tableState = {
-    seat_count: 0,
     seats: [],
-    hand: {
-      button_seat: 0,
-      board: [],
-      folded_players: []
-    },
     pot: 0,
     acting_player: 0,
     dealer: 0
   }
 
-  if (true) {
+  if (false) {
     chatLog.push({from: 1, type: 'action', text: 'shows <b span="card">Qs</b>'})
     tableState.hand.involved_players = [0,1,2,3,4]
     tableState.seat_count = 6
     tableState.seats = [{
-      seat_state: "SittingIn",
-      committed: 19933,
+      SittingIn: true,
+      heap: 19933,
       stack: 24566,
       player_id: 2},
       {
-      seat_state: "SittingIn",
-      committed: 19933,
+      SittingIn: true,
+      heap: 19933,
       stack: 1204,
       player_id: 1}
       ,{
-      seat_state: "SittingIn",
-      committed: 0,
+      SittingIn: true,
+      heap: 0,
       stack: 0,
       player_id: 1}
       ,{
-      seat_state: "SittingIn",
-      committed: 0,
+      SittingIn: true,
+      heap: 0,
       stack: 0,
       player_id: 1}
       ,{
-      seat_state: "SittingIn",
-      committed: 0,
+      SittingIn: true,
+      heap: 0,
       stack: 0,
       player_id: 1}
       ,{
-      seat_state: "SittingIn",
-      committed: 0,
+      SittingIn: true,
+      heap: 0,
       stack: 0,
       player_id: 1}
     ]
-    mycards = ['as', 'kh']
+    myCards = ['as', 'kh']
 
     onMount(function() {
       setInterval(function() {
         cardsDealt = false
-        if (tableState.seats[1].committed == 0) tableState.seats[1].committed = 3000
-        else tableState.seats[1].committed = 0
+        if (tableState.seats[1].heap == 0) tableState.seats[1].heap = 3000
+        else tableState.seats[1].heap = 0
         tick().then(() => cardsDealt = true)
-        if (!cardsDealt) tableState.hand.button_seat++
-        if (tableState.hand.button_seat > 5) tableState.hand.button_seat = 0
+        if (!cardsDealt) tableState.hand.dealer_seat++
+        if (tableState.hand.dealer_seat > 5) tableState.hand.dealer_seat = 0
       }, 3000)
       cardsDealt = true
     })
@@ -261,7 +271,7 @@
     const result = []
     for (let index = 0; index < tableState.seats.length; index++) {
       const seat = tableState.seats[index];
-      if (seat.seat_state == 'SittingIn') result.push(seat)
+      if (seat.sitting_in) result.push(seat)
     }
     return result
   }
@@ -293,25 +303,15 @@
   }
 
   function seat(index) {
-    if (tableState.seats[index] && tableState.seats[index].seat_state != 'Empty') {
+    if (tableState.seats[index] && tableState.seats[index].player_id) {
       return tableState.seats[index]
     }
     else return null
   }
 
-  function mySeatIndex() {
-    if (!$player) return null
-    for (let index = 0; index < tableState.seats.length; index++) {
-      const element = tableState.seats[index];
-      if (element.player_id == $player.id) return index
-    }
-    return null
-  }
+ 
 
-
-  function sitting() {
-    return mySeatIndex() !== null;
-  }
+  
 
   async function sitDown(index) {
     await socket.send(JSON.stringify({msg: "sit-down", seat: index}))
@@ -352,55 +352,87 @@
     socket.onmessage = (event) => {
       var data = JSON.parse(event.data)
       console.log(data)
-      if (data.msg == 'table_state') {
-        tableState = data
-        if (data.hand && data.hand.timeout) {
-          timeOut = new Date().getTime() + 12000 // data.hand.timeout
-          timerStart = new Date().getTime()
-        }
-        if (data.hand && data.hand.minraise_to) {
-          raiseTo = data.hand.minraise_to
-        }
-        if (data.hand && data.hand.button_seat != oldButtonSeatIndex) {
-          oldButtonSeatIndex = data.hand.button_seat
-          console.log('buttonseat changed.')
-          // hide the holecards
-          cardsDealt = false;
-
-          // and show them again (this triggers the deal animation)
-          tick().then(() => cardsDealt = true);
-        }
-      }
-      if (data.msg == 'holecards') {
-        mycards = data.value;
+      if (data.type == 'table-state') {
+        tableState = data 
       }
 
-      // if player_id is set, it means a player did something
-      if (data.player_id) {
-        if ($player && $player.id == data.player_id) {
-          // Some messages indicate that the player balance might have changed. reload the player store.
-          if (data.msg == 'player_table_bring_in') player.reload()
-          if (data.msg == 'player_table_stand_up') player.reload()
+      if (data.type == 'hand-state') {
+        handState = data
+        if (data.participants.length > 0) {
+          cardsDealt = true
         }
-        chatLog.push({from: data.player_id, text: data.msg, type: 'action'})
-        chatLog = chatLog
       }
-      
-      // If the data from the server contains the "sidepots" field, it means somebody won something
-      if (data.sidepots) {
-        chatLog.push({from: data.player_id, text: data.msg, type: 'action'})
-        for (let i = 0; i < data.sidepots.length; i++) {
-          const sidepot = data.sidepots[i];
-          for (const playerId in data.holecards) {
-            const holecards = data.holecards[playerId];
-            chatLog.push({from: playerId, text: `shows ${holecards}`, type: 'action'})   
-          }
-          for (const playerId in sidepot) {
-            const amount = sidepot[playerId];
-            const text = data.holecards[playerId] ? `wins ${amount} with ${data.holecards[playerId]}` : `takes ${amount}`
-            chatLog.push({from: playerId, text, type: 'action'}) 
-          }
-        }
+
+      if (data.type == 'stand-up') {
+        tableState.seats[data.seat] = {}
+      }
+
+      if (data.type == 'sit-down') {
+        tableState.seats[data.seat] = {player_id: data.player_id}
+      }
+
+      if (data.type == 'bring-in') {
+        tableState.seats[data.seat].stack = data.amount
+      }
+
+      if (data.type == 'sit-in') {
+        tableState.seats[data.seat].sitting_in = true 
+      }
+
+      if (data.type == 'sit-out') {
+        tableState.seats[data.seat].sitting_in = false
+      }
+
+      if (data.type == 'hand-started') {
+        handState.dealer = data.dealer
+        cardsDealt = false
+        tick().then(() => cardsDealt = true)
+      }
+
+      if (data.type == 'player-secret') {
+        myCards = data.secret
+      }
+
+      if (data.type == 'post-sb') {
+        tableState.seats[data.seat].heap += data.amount
+        tableState.seats[data.seat].stack -= data.amount
+      }
+
+      if (data.type == 'post-bb') {
+        tableState.seats[data.seat].heap += data.amount
+        tableState.seats[data.seat].stack -= data.amount
+      }
+
+      if (data.type == 'betting-round-started') {
+        handState.board = data.board
+        tableState.total_gathered = data.total_gathered
+      }
+
+      if (data.type == 'action-is-on') {
+        handState.action_at = data
+        timerStart = new Date().getTime()
+        timeOut = Date.parse(data.timeout)
+      }
+
+      if (data.type == 'betting-round-ended') {
+        // set heap to 0 on all seats
+        tableState.seats.map((seat) => seat.heap = 0)
+      }
+
+      if (data.type == 'fold') {
+        
+      }
+
+      if (data.type == 'raise') {
+        
+      }
+
+      if (data.type == 'call') {
+        
+      }
+
+      if (data.type == 'waiting-for-next-round-to-start') {
+        
       }
 
       if (data.msg == "chat") {
@@ -462,7 +494,7 @@
   overflow: hidden;
   position: relative;
   width: 100%;
-  height: calc(100% - 35px);
+  height: calc(100%);
   background: url('/felt.png');
 }
 .sidebar, .table {
@@ -739,10 +771,10 @@
   <div class="cog" class:is-active={sidebarOpened} on:click={() => sidebarOpened = !sidebarOpened}></div>
 
   <div class="table">
-    {#each Array(tableState.seat_count) as _, index}
-      <div bind:this={seatElements[index]} class="seat seat_{index} {tableState.seats[index] && tableState.seats[index].seat_state || 'Empty'}">
+    {#each Array(tableState.seats.length) as _, index}
+      <div bind:this={seatElements[index]} class="seat seat_{index}">
         {#if tableState.seats[index] && seat(index)}
-          {#if tableState.hand && tableState.hand.button_seat == index}
+          {#if handState.dealer && handState.dealer.seat == index}
             <img class="dealer" in:receive={'dealer'} out:send={'dealer'} src="/button.png" alt="DEALER">
           {/if}
           <div class:action="{tableState.seats[index].last_action}" class="player" transition:fly|local="{{ y: -15, duration: 350 }}">
@@ -755,11 +787,11 @@
             <div class="stack">
               {(tableState.seats[index].stack || 0).toLocaleString()}<span class="currency">元</span>
             </div>
-            {#if tableState.hand && tableState.hand.folded_players.indexOf(index) == -1 && tableState.hand.involved_players.indexOf(index) !== -1}
+            {#if true || participatingSeats.indexOf(index) !== -1}
               <div out:fly|local={{duration: 1000, y: 20}} class="hole">
-                {#if cardsDealt && mySeatIndex() == index && mycards}
-                  <img in:dealTransition|local={{rotate: -5, card: 1, seat: index}} style="width: {$settings.cardSize}px" class="card1" alt="Card" src="/cards/{mycards[0].toLowerCase()}.png">
-                  <img in:dealTransition|local={{rotate: 12, card: 2, seat: index}} style="width: {$settings.cardSize}px" class="card2" alt="Card" src="/cards/{mycards[1].toLowerCase()}.png">
+                {#if cardsDealt && mySeatIndex == index && myCards && myCards.length > 0}
+                  <img in:dealTransition|local={{rotate: -5, card: 1, seat: index}} style="width: {$settings.cardSize}px" class="card1" alt="Card" src="/cards/{myCards[0].toLowerCase()}.png">
+                  <img in:dealTransition|local={{rotate: 12, card: 2, seat: index}} style="width: {$settings.cardSize}px" class="card2" alt="Card" src="/cards/{myCards[1].toLowerCase()}.png">
                 {:else if cardsDealt}
                   <img in:dealTransition|local={{rotate: -5, card: 1, seat: index}} style="width: {$settings.cardSize}px" class="card1" alt="Card" src="/cards/back.png">
                   <img in:dealTransition|local={{rotate: 12, card: 2, seat: index}} style="width: {$settings.cardSize}px" class="card2" alt="Card" src="/cards/back.png">
@@ -768,29 +800,29 @@
             {/if}
             <div class="image">
               <img alt="" class="profile_pic" src="{cachedPlayerData && playerData(tableState.seats[index].player_id).profile_pic}">
-              {#if tableState.hand && tableState.hand.acting_player == index}
+              {#if handState.action_at.seat == index}
                 <svg width="48" height="48" viewBox="0 0 48 48">
                   <circle stroke-dasharray="{timerStroke} {2 * 3.141 * 22}" cx="24" cy="24" r="22" fill="none" stroke="#FFEE44" stroke-width="4" />
                 </svg>
               {/if}
             </div>
-            {#if tableState.seats[index].seat_state !== 'SittingIn'}
-              {tableState.seats[index].seat_state}
+            {#if !tableState.seats[index].sitting_in}
+              Sitting Out
             {/if}
             <div class="bet" style="top: {$settings.cardSize * 1.4 + 34}px">
               {#if tableState.seats[index].last_action}
                 {actionsPastTense[tableState.seats[index].last_action]}
               {/if}
-              {#if tableState.seats[index].committed > 0}
-                {tableState.seats[index].committed.toLocaleString()}<span class="currency">元</span>
+              {#if tableState.seats[index].heap > 0}
+                {tableState.seats[index].heap.toLocaleString()}<span class="currency">元</span>
                 <div out:flyIntoPotTransition|local class="chips" bind:this={chipElements[index]}>
-                  <Chips amount="{tableState.seats[index].committed}"></Chips>
+                  <Chips amount="{tableState.seats[index].heap}"></Chips>
                 </div>
               {/if}
             </div>
           </div>
         {:else}
-          {#if !sitting()}
+          {#if !mySeat}
             {#if $player}
               <button on:click={() => sitDown(index)}>Sit here 😊</button>
             {:else}
@@ -802,25 +834,31 @@
     {/each}
     <div class="middle">
       <div class="board">
-        {#each (tableState.hand && tableState.hand.board || []) as card}
+        {#each (handState.board || []) as card}
           <img in:fly="{{ y: -25, duration: 450 }}" src="/cards/{card[0].toLowerCase()}{card[1]}.png" class="card" alt="{card[0]}{card[1]}">
         {/each}
-        {#each Array(5 - (tableState.hand && tableState.hand.board.length || 0)) as _}
+        {#each Array(5 - (handState.board && handState.board.length || 0)) as _}
           <img src="/cards/empty.png" class="card placeholder" alt="Placeholder">
         {/each}
         <div class="pot" bind:this={pot}>
-          <p>Pot: {Number(tableState.hand && tableState.hand.amount_gathered || 0).toLocaleString()} Satoshi</p>
-          <Chips amount={tableState.hand && tableState.hand.amount_gathered || 0}></Chips>
+          <p>Pot: {Number(tableState.total_gathered || 0).toLocaleString()} Satoshi</p>
+          <Chips amount={tableState.total_gathered || 0}></Chips>
         </div>
       </div>
     </div>
-    <button on:click={() => sitOut()}>Sit Out</button>
-    <button on:click={() => standUp()}>Stand Up</button>
+    {#if mySeat}
+      {#if sittingIn}
+        <button on:click={() => sitOut()}>Sit Out</button>
+      {:else}
+        <button on:click={() => sitIn()}>Sit In</button>
+      {/if}
+      <button on:click={() => standUp()}>Stand Up</button>
+    {/if}
     <div class="command_panel">
       <!-- {#if sitting()} -->
         <div class="bet_settings">
           <label>
-            {#each mycards as card}
+            {#each myCards as card}
               <img in:fly={{y: -20}} class="card1" alt="Card" src="/cards/{card.toLowerCase()}.png">
             {/each}          
             <input type=number bind:value={raiseTo} min={tableState.hand && tableState.hand.minraise_to} max={mySeat && mySeat.stack}>
@@ -829,9 +867,9 @@
             <!-- <button on:click={() => raiseTo = mySeat && mySeat.stack}>Max</button> -->
           </label>
         </div>
-        <!-- {#if tableState.hand && mySeatIndex() === tableState.hand.acting_player} -->
+        <!-- {#if tableState.hand && mySeatIndex === tableState.hand.acting_player} -->
           <button on:click={() => fold()} disabled={!isMyTurn}>Fold</button>
-          {#if tableState.hand && mySeat && tableState.hand.max_commitment == mySeat.committed}
+          {#if tableState.hand && mySeat && tableState.hand.max_commitment == mySeat.heap}
             <button on:click={() => check()} disabled={!isMyTurn}>Check</button>
           {:else}
             <button on:click={() => call()} disabled={!isMyTurn}>Call {tableState.hand && tableState.hand.max_commitment}</button>
@@ -842,9 +880,7 @@
             <button on:click={() => raise(raiseTo)} disabled={!isMyTurn}>Raise To {raiseTo}</button>
           {/if}
           <!-- {/if} -->
-        <!-- {#if tableState.seats[mySeatIndex()].seat_state == 'SittingOut'}
-          <button on:click={() => sitIn()}>Sit In</button>
-        {/if} -->
+        
         
       <!-- {/if} -->
     </div>

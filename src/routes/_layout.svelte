@@ -33,7 +33,7 @@
 	let showDashboard = false;
   let {page} = stores()
 
-  let hideNav = $page.query.hideNav;
+  let hideNav = $page.query.frame;
   $player = playerData;
   
   let { session } = stores();
@@ -63,6 +63,12 @@ nav {
     vertical-align: middle;
   }
 }
+    .playerinfo {
+      position: fixed;
+      top: 0;
+      right: 0;
+      z-index: 10000;
+    }
 .menu {
   padding: 6px;
 }
@@ -91,9 +97,17 @@ nav {
 
 <slot></slot>
 
+<div class="playerinfo">
+  {#if $player}
+    {$player.nick} balance: {$player.balances.BTC}
+    <button on:click={() => showDashboard = true}>Top Up</button>  
+  {:else}
+    not logged in
+  {/if}
+</div>
+
 {#if showDashboard}
 	<Modal on:close="{() => showDashboard = false}">
     <Deposit></Deposit>
-    <Withdrawals></Withdrawals>
 	</Modal>
 {/if}
