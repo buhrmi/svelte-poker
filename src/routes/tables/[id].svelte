@@ -7,11 +7,16 @@
   import { quintOut, cubicOut } from 'svelte/easing';
 	import { crossfade } from 'svelte/transition';
   import { writable } from "svelte/store";
+  import solver from 'pokersolver';
+  const Hand = solver.Hand
+  
 
   const defaultSettings = {
     cardSize: 33
   }
   
+  
+
   if (typeof window !== 'undefined' && localStorage.getItem("settings")) {
     Object.assign(defaultSettings, JSON.parse(localStorage.getItem('settings')))
   }
@@ -19,13 +24,13 @@
   const settings = writable(defaultSettings)
   
   if (typeof window !== 'undefined') {
+    window.solver = solver
     settings.subscribe(val => localStorage.setItem("settings", JSON.stringify(val)));
   }
 
   let oldButtonSeatIndex;
   let cardsDealt;
   let myCards = []
-
 
   // A svelte transition that simulates cards being "cardsDealt"
   function dealTransition(node, {rotate, card, seat}) {
@@ -162,13 +167,27 @@
   let isDealt = []
   let c = 0
   let mySeatIndex;
+  let winningHand;
+  let winningIndex;
+  let myHand;
+  let rotatedSeatIndicies
 
   $: if (chatLog && statusDiv) statusDiv.scrollTop = statusDiv.scrollHeight;
   
-  $: isMyTurn = mySeatIndex === handState.action_at.seat
+  $: isMyTurn = handState.action_at && mySeatIndex === handState.action_at.seat
   $: mySeat = tableState.seats && tableState.seats[mySeatIndex]
   $: sittingIn = ++c && mySeat && mySeat.sitting_in
-  $: participatingSeats = handState && handState.participants.map((p) => p.seat)
+  $: participatingSeats = handState && handState.participants.map((p) => p && p.seat).filter(Boolean)
+  
+  // rotate seat indicies based on player's seat index
+  $: {
+    // make an array [0, 1, 2, ..., numSeats-1]
+    const initial = [...Array().keys()]
+    
+      initial.unshift( initial.splice(tableState.seats.length, initial.length ) )
+    rotatedSeatIndicies = initial
+  }
+  // find my seat index
   $: {
     if ($player) {
       for (let index = 0; index < tableState.seats.length; index++) {
@@ -176,6 +195,17 @@
         if (element.player_id == $player.id) mySeatIndex = index
       }
     }
+  }
+  $: {
+    let cards = handState.board.concat(myCards)
+    if (cards.length >= 2) {
+      console.log(cards)
+      myHand = Hand.solve(cards)
+    }
+    else {
+      myHand = null
+    }
+
   }
   let chatInput
   let currency = 'BTC'
@@ -186,6 +216,7 @@
   let tableState = {};
   let handState = {
     participants: [],
+    board: [],
     action_at: {}
   }
   tableState = {
@@ -196,54 +227,21 @@
   }
 
   if (false) {
-    chatLog.push({from: 1, type: 'action', text: 'shows <b span="card">Qs</b>'})
-    tableState.hand.involved_players = [0,1,2,3,4]
-    tableState.seat_count = 6
-    tableState.seats = [{
-      SittingIn: true,
-      heap: 19933,
-      stack: 24566,
-      player_id: 2},
-      {
-      SittingIn: true,
-      heap: 19933,
-      stack: 1204,
-      player_id: 1}
-      ,{
-      SittingIn: true,
-      heap: 0,
-      stack: 0,
-      player_id: 1}
-      ,{
-      SittingIn: true,
-      heap: 0,
-      stack: 0,
-      player_id: 1}
-      ,{
-      SittingIn: true,
-      heap: 0,
-      stack: 0,
-      player_id: 1}
-      ,{
-      SittingIn: true,
-      heap: 0,
-      stack: 0,
-      player_id: 1}
-    ]
-    myCards = ['as', 'kh']
+    handState.board = ['Ks', '3h']
+    myCards = ['As', 'Kh']
 
-    onMount(function() {
-      setInterval(function() {
-        cardsDealt = false
-        if (tableState.seats[1].heap == 0) tableState.seats[1].heap = 3000
-        else tableState.seats[1].heap = 0
-        tick().then(() => cardsDealt = true)
-        if (!cardsDealt) tableState.hand.dealer_seat++
-        if (tableState.hand.dealer_seat > 5) tableState.hand.dealer_seat = 0
-      }, 3000)
-      cardsDealt = true
-    })
-    lastChatMessages[1] = "YO BITCHES, calling all your shit 😅"
+    // onMount(function() {
+    //   setInterval(function() {
+    //     cardsDealt = false
+    //     if (tableState.seats[1].heap == 0) tableState.seats[1].heap = 3000
+    //     else tableState.seats[1].heap = 0
+    //     tick().then(() => cardsDealt = true)
+    //     if (!cardsDealt) tableState.hand.dealer_seat++
+    //     if (tableState.hand.dealer_seat > 5) tableState.hand.dealer_seat = 0
+    //   }, 3000)
+    //   cardsDealt = true
+    // })
+    // lastChatMessages[1] = "YO BITCHES, calling all your shit 😅"
   }
 
   
@@ -253,7 +251,6 @@
   let timerStart = new Date().getTime()
   onMount(function() {
     let current = 0
- 
 
     function updateTimeoutBar() {
       let ratio = (new Date().getTime() - timerStart) / (timeOut - timerStart)
@@ -264,8 +261,6 @@
   })
 
   let chipElements = []
-
-
 
   function getSeatsSittingIn() {
     const result = []
@@ -385,6 +380,7 @@
 
       if (data.type == 'hand-started') {
         handState.dealer = data.dealer
+        handState.participants = data.participants
         cardsDealt = false
         tick().then(() => cardsDealt = true)
       }
@@ -405,6 +401,8 @@
 
       if (data.type == 'betting-round-started') {
         handState.board = data.board
+        handState.participants = data.participants
+        
         tableState.total_gathered = data.total_gathered
       }
 
@@ -420,11 +418,15 @@
       }
 
       if (data.type == 'fold') {
-        
+        for (let i = 0; i < handState.participants.length; i++) {
+          const p = handState.participants[i];
+          if (p && p.seat == data.seat) handState.participants[i] = null
+        }
       }
 
       if (data.type == 'raise') {
-        
+        tableState.seats[data.seat].heap += data.amount
+        tableState.seats[data.seat].stack -= data.amount
       }
 
       if (data.type == 'call') {
@@ -683,10 +685,11 @@
     display: inline-block;
     .card {
       margin-right: 4px;
-      max-width: 120px;
+      max-width: 80px;
       width: calc(14%);
       min-width: 40px;
       display: inline-block;
+      box-shadow: 0 1px 4px -2px rgba(0,0,0,0.8);
     }
   }
   .pot {
@@ -787,7 +790,7 @@
             <div class="stack">
               {(tableState.seats[index].stack || 0).toLocaleString()}<span class="currency">元</span>
             </div>
-            {#if true || participatingSeats.indexOf(index) !== -1}
+            {#if participatingSeats.indexOf(index) !== -1}
               <div out:fly|local={{duration: 1000, y: 20}} class="hole">
                 {#if cardsDealt && mySeatIndex == index && myCards && myCards.length > 0}
                   <img in:dealTransition|local={{rotate: -5, card: 1, seat: index}} style="width: {$settings.cardSize}px" class="card1" alt="Card" src="/cards/{myCards[0].toLowerCase()}.png">
@@ -846,6 +849,7 @@
         </div>
       </div>
     </div>
+    { participatingSeats }
     {#if mySeat}
       {#if sittingIn}
         <button on:click={() => sitOut()}>Sit Out</button>
@@ -855,6 +859,10 @@
       <button on:click={() => standUp()}>Stand Up</button>
     {/if}
     <div class="command_panel">
+      {#if myHand}
+        { myHand.descr }
+      {/if}
+
       <!-- {#if sitting()} -->
         <div class="bet_settings">
           <label>
@@ -868,16 +876,16 @@
           </label>
         </div>
         <!-- {#if tableState.hand && mySeatIndex === tableState.hand.acting_player} -->
-          <button on:click={() => fold()} disabled={!isMyTurn}>Fold</button>
+          <div class="btn fold" on:click={() => fold()} disabled={!isMyTurn}>Fold</div>
           {#if tableState.hand && mySeat && tableState.hand.max_commitment == mySeat.heap}
-            <button on:click={() => check()} disabled={!isMyTurn}>Check</button>
+            <div class="btn check" on:click={() => check()} disabled={!isMyTurn}>Check</div>
           {:else}
-            <button on:click={() => call()} disabled={!isMyTurn}>Call {tableState.hand && tableState.hand.max_commitment}</button>
+            <div class="btn call" on:click={() => call()} disabled={!isMyTurn}>Call {tableState.hand && tableState.hand.max_commitment}</div>
           {/if}
           {#if tableState.hand && tableState.hand.max_commitment == 0}
-            <button on:click={() => bet(raiseTo)} disabled={!isMyTurn}>Bet {raiseTo}</button>
+            <div class="btn bet" on:click={() => bet(raiseTo)} disabled={!isMyTurn}>Bet {raiseTo}</div>
           {:else}
-            <button on:click={() => raise(raiseTo)} disabled={!isMyTurn}>Raise To {raiseTo}</button>
+            <div class="btn raise" on:click={() => raise(raiseTo)} disabled={!isMyTurn}>Raise To {raiseTo}</div>
           {/if}
           <!-- {/if} -->
         
