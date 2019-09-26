@@ -1,6 +1,6 @@
 # Svelte Poker 
 
-A poker frontend built with [Svelte](https://svelte.dev)/[Sapper](https://sapper.svelte.dev). Currently in development, not ready for public consumption. Requires proprietary backend (currently not public). Support for more backends might be added in the future.
+A poker frontend built with [Svelte](https://svelte.dev)/[Sapper](https://sapper.svelte.dev). Currently in development, not ready for public consumption. Requires proprietary backend. Support for more backends might be added in the future.
 
 ## Try it
 
@@ -17,6 +17,12 @@ or
 
 
 ## Progress
+
+
+2019-09-26
+
+![](https://i.imgur.com/nSXsl7G.png)
+
 
 2019-09-03
 
