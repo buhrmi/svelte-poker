@@ -101,15 +101,6 @@
     }
   }
 
-  const actionsPastTense = {
-    P: 'posted',
-    F: 'folded',
-    X: 'checked',
-    C: 'called',
-    B: 'bet',
-    R: 'raised'
-  }
-
 	const [send, receive] = crossfade({
 		duration: d => Math.sqrt(d * 1000),
 
@@ -166,29 +157,44 @@
   let raiseTo = 0
   let isDealt = []
   let c = 0
-  let mySeatIndex;
-  let winningHand;
-  let winningIndex;
+  let mySeatIndex = null;
+  let winningCards;
+  let winningSeat;
   let myHand;
   let rotatedSeatIndicies
+  let minRaiseTo = 0;
 
   $: if (chatLog && statusDiv) statusDiv.scrollTop = statusDiv.scrollHeight;
   
   $: isMyTurn = handState.action_at && mySeatIndex === handState.action_at.seat
   $: mySeat = tableState.seats && tableState.seats[mySeatIndex]
   $: sittingIn = ++c && mySeat && mySeat.sitting_in
-  $: participatingSeats = handState && handState.participants.map((p) => p && p.seat).filter(Boolean)
+  $: seatsWithHolecards = handState && handState.participants.filter((p) => p.has_holecards).map((p) => p.seat)
+  $: raiseTo = Math.max(minRaiseTo, raiseTo)
+
+  let largestHeap;
+  $: {
+    if (tableState.seats) {
+      largestHeap = 0
+      for (let index = 0; index < tableState.seats.length; index++) {
+        const element = tableState.seats[index];
+        if (element.heap > largestHeap) largestHeap = element.heap
+      }
+    }
+  }
   
+
   // rotate seat indicies based on player's seat index
   $: {
     // make an array [0, 1, 2, ..., numSeats-1]
     const initial = [...Array().keys()]
-    
-      initial.unshift( initial.splice(tableState.seats.length, initial.length ) )
+    initial.unshift(initial.splice(tableState.seats.length, initial.length))
     rotatedSeatIndicies = initial
   }
+  
   // find my seat index
   $: {
+    mySeatIndex = null
     if ($player) {
       for (let index = 0; index < tableState.seats.length; index++) {
         const element = tableState.seats[index];
@@ -196,10 +202,10 @@
       }
     }
   }
+  
   $: {
     let cards = handState.board.concat(myCards)
     if (cards.length >= 2) {
-      console.log(cards)
       myHand = Hand.solve(cards)
     }
     else {
@@ -208,8 +214,10 @@
 
   }
   let chatInput
+  let highlightMyHand
   let currency = 'BTC'
   let historyDiv
+
   let connectionString = `${gameServer}?table_id=${tableId}`
   if (accessToken) connectionString += `&access_token=${accessToken}`
     
@@ -228,8 +236,13 @@
 
   if (false) {
     handState.board = ['Ks', '3h']
-    myCards = ['As', 'Kh']
-
+    myCards = ['As', 'Kh', 'Ah', 'Kc']
+    tableState.seats = [
+      {
+        player_id: 1,
+        heap: 20
+      }
+    ]
     // onMount(function() {
     //   setInterval(function() {
     //     cardsDealt = false
@@ -356,18 +369,51 @@
         if (data.participants.length > 0) {
           cardsDealt = true
         }
+        handState.big_blind
+        minRaiseTo = data.min_raise_to
+      }
+
+      if (data.type == 'hand-ended') {
+        if (data.pot_contestants.length > 1) {
+          chatLog.push({type: 'action', text: '*** SHOW DOWN ***'})  
+
+          for (let index = 0; index < data.pot_contestants.length; index++) {
+            const contestant = data.pot_contestants[index];  
+            const hand = Hand.solve(handState.board.concat(contestant.secret))
+            chatLog.push({type: 'action', from: contestant.player_id, text: `shows ${contestant.secret}: ${hand.descr}`})
+          }
+        }
+        for (let index = 0; index < data.sidepots.length; index++) {
+          const sidepot = data.sidepots[index]
+          for (const playerId in sidepot.payout_table) {
+            const seatIndex = getSeatIndexFromID(playerId)
+            const winnings = sidepot.payout_table[playerId]
+            if (!winnings) continue;
+            if (seatIndex) {
+              tableState.seats[seatIndex].stack += sidepot.payout_table[playerId]
+            }
+            chatLog.push({type: 'action', from: playerId, text: `collected ${winnings} from pot`})
+            chatLog = chatLog
+          }
+        }
+        
+        chatLog.push({type: 'action', text: ' '})  
       }
 
       if (data.type == 'stand-up') {
         tableState.seats[data.seat] = {}
+        if (data.seat == mySeatIndex) myCards = []
+        tableState.seats = tableState.seats
       }
 
       if (data.type == 'sit-down') {
-        tableState.seats[data.seat] = {player_id: data.player_id}
+        tableState.seats[data.seat] = {player_id: data.player_id, heap: 0, stack: 0}
+        tableState.seats = tableState.seats
       }
 
       if (data.type == 'bring-in') {
         tableState.seats[data.seat].stack = data.amount
+        tableState.seats = tableState.seats
       }
 
       if (data.type == 'sit-in') {
@@ -383,27 +429,39 @@
         handState.participants = data.participants
         cardsDealt = false
         tick().then(() => cardsDealt = true)
+        chatLog.push({type: 'action', text: `--- HAND 1 --- Seat #${data.dealer.seat} is the button`})
       }
 
       if (data.type == 'player-secret') {
         myCards = data.secret
+        chatLog.push({type: 'action', from: $player.id, text: `was dealt ${data.secret}`})
       }
 
       if (data.type == 'post-sb') {
         tableState.seats[data.seat].heap += data.amount
         tableState.seats[data.seat].stack -= data.amount
+        tableState.seats[data.seat].lastAction = 'Posted SB: '
+        chatLog.push({type: 'action', from: data.player_id, text: `posts small blind ${data.amount}`})
+        chatLog = chatLog
       }
 
       if (data.type == 'post-bb') {
         tableState.seats[data.seat].heap += data.amount
         tableState.seats[data.seat].stack -= data.amount
+        tableState.seats[data.seat].lastAction = 'Posted BB: '
+        chatLog.push({type: 'action', from: data.player_id, text: `posts big blind ${data.amount}`})
+        chatLog = chatLog
       }
 
       if (data.type == 'betting-round-started') {
         handState.board = data.board
         handState.participants = data.participants
-        
         tableState.total_gathered = data.total_gathered
+        let round = data.betting_round == 'preflop' ? 'HOLE CARDS' : data.betting_round.toUpperCase()
+        chatLog.push({type: 'action', text: `*** ${round} *** ${handState.board}`})
+        chatLog = chatLog
+        raiseTo = 0
+        minRaiseTo = data.min_raise_to
       }
 
       if (data.type == 'action-is-on') {
@@ -413,24 +471,54 @@
       }
 
       if (data.type == 'betting-round-ended') {
-        // set heap to 0 on all seats
+        // set heap to 0 on all seats. setting heap to 0 will trigger the "move to pot" out-transition on the chips
+        handState.action_at = {}
+        tableState.seats.map((s) => s.lastAction = null)
         tableState.seats.map((seat) => seat.heap = 0)
       }
 
       if (data.type == 'fold') {
+        // If we get a fold message, 
         for (let i = 0; i < handState.participants.length; i++) {
           const p = handState.participants[i];
-          if (p && p.seat == data.seat) handState.participants[i] = null
+          if (p && p.seat == data.seat) handState.participants[i].has_holecards = false
         }
+        tableState.seats[data.seat].lastAction = 'Folded'
+        if (data.seat == mySeatIndex) myCards = []
+        chatLog.push({type: 'action', from: data.player_id, text: `folded`})
+        chatLog = chatLog
       }
 
       if (data.type == 'raise') {
-        tableState.seats[data.seat].heap += data.amount
-        tableState.seats[data.seat].stack -= data.amount
+        let diff = data.heap - tableState.seats[data.seat].heap
+        tableState.seats[data.seat].heap = data.heap
+        tableState.seats[data.seat].stack -= diff
+        tableState.seats[data.seat].lastAction = 'Raised: '
+        minRaiseTo = data.amount + data.heap
+        chatLog.push({type: 'action', from: data.player_id, text: `raises ${data.amount}`})
+        chatLog = chatLog
+      }
+
+      if (data.type == 'check') {
+        chatLog.push({type: 'action', from: data.player_id, text: `checks`})
+        chatLog = chatLog
       }
 
       if (data.type == 'call') {
-        
+        tableState.seats[data.seat].heap += data.amount
+        tableState.seats[data.seat].stack -= data.amount
+        tableState.seats[data.seat].lastAction = 'Called: '
+        chatLog.push({type: 'action', from: data.player_id, text: `calls ${data.amount}`})
+        chatLog = chatLog
+      }
+
+      if (data.type == 'bet') {
+        tableState.seats[data.seat].heap = data.heap
+        tableState.seats[data.seat].stack -= data.heap
+        tableState.seats[data.seat].lastAction = 'Bet: '
+        chatLog.push({type: 'action', from: data.player_id, text: `bets ${data.heap}`})
+        chatLog = chatLog
+        minRaiseTo = data.heap * 2
       }
 
       if (data.type == 'waiting-for-next-round-to-start') {
@@ -442,6 +530,7 @@
         chatLog = chatLog
         displayChatMessage(data.from, data.text)
         tick().then(() => historyDiv.scrollTop = historyDiv.scrollHeight);
+        chatLog.push({from: data.player_id, text: data.text})
       }
     };
 
@@ -534,6 +623,7 @@
   }
   
 }
+
 .sidebar {
   z-index: 500;
   word-wrap: break-word;
@@ -703,6 +793,13 @@
   .sidebar {
     width: 100%;
   }
+  .command_panel {
+    max-width: 100%;
+    width: 100%;
+  }
+  .status {
+    display: none;
+  }
 }
 // Wide styling
 @media screen and (min-width: 521px) {
@@ -731,6 +828,15 @@
     }
     span {
       vertical-align: middle;
+    }
+  }
+}
+.highlighting_my_best {
+  .card, .card1, .card2 {
+    opacity: 0.7;
+    &.best_card {
+      opacity: 1;
+
     }
   }
 }
@@ -773,14 +879,14 @@
 
   <div class="cog" class:is-active={sidebarOpened} on:click={() => sidebarOpened = !sidebarOpened}></div>
 
-  <div class="table">
+  <div class="table {highlightMyHand ? 'highlighting_my_best' : ''}">
     {#each Array(tableState.seats.length) as _, index}
       <div bind:this={seatElements[index]} class="seat seat_{index}">
         {#if tableState.seats[index] && seat(index)}
           {#if handState.dealer && handState.dealer.seat == index}
             <img class="dealer" in:receive={'dealer'} out:send={'dealer'} src="/button.png" alt="DEALER">
           {/if}
-          <div class:action="{tableState.seats[index].last_action}" class="player" transition:fly|local="{{ y: -15, duration: 350 }}">
+          <div class:action="{tableState.seats[index].lastAction}" class="player" transition:fly|local="{{ y: -15, duration: 350 }}">
             {#if lastChatMessages[index]}
               <p in:fade="{{ duration: 100 }}" out:fly="{{ y: -8, duration: 650 }}"class="bubble speech">{lastChatMessages[index]}</p>
             {/if}
@@ -790,11 +896,11 @@
             <div class="stack">
               {(tableState.seats[index].stack || 0).toLocaleString()}<span class="currency">元</span>
             </div>
-            {#if participatingSeats.indexOf(index) !== -1}
+            {#if seatsWithHolecards.indexOf(index) !== -1}
               <div out:fly|local={{duration: 1000, y: 20}} class="hole">
                 {#if cardsDealt && mySeatIndex == index && myCards && myCards.length > 0}
-                  <img in:dealTransition|local={{rotate: -5, card: 1, seat: index}} style="width: {$settings.cardSize}px" class="card1" alt="Card" src="/cards/{myCards[0].toLowerCase()}.png">
-                  <img in:dealTransition|local={{rotate: 12, card: 2, seat: index}} style="width: {$settings.cardSize}px" class="card2" alt="Card" src="/cards/{myCards[1].toLowerCase()}.png">
+                  <img in:dealTransition|local={{rotate: -5, card: 1, seat: index}} style="width: {$settings.cardSize}px" class="card1 {myHand.cards.indexOf(myCards[0]) !== -1 ? 'best_card' : ''}" alt="Card" src="/cards/{myCards[0].toLowerCase()}.png">
+                  <img in:dealTransition|local={{rotate: 12, card: 2, seat: index}} style="width: {$settings.cardSize}px" class="card2 {myHand.cards.indexOf(myCards[1]) !== -1 ? 'best_card' : ''}" alt="Card" src="/cards/{myCards[1].toLowerCase()}.png">
                 {:else if cardsDealt}
                   <img in:dealTransition|local={{rotate: -5, card: 1, seat: index}} style="width: {$settings.cardSize}px" class="card1" alt="Card" src="/cards/back.png">
                   <img in:dealTransition|local={{rotate: 12, card: 2, seat: index}} style="width: {$settings.cardSize}px" class="card2" alt="Card" src="/cards/back.png">
@@ -813,8 +919,8 @@
               Sitting Out
             {/if}
             <div class="bet" style="top: {$settings.cardSize * 1.4 + 34}px">
-              {#if tableState.seats[index].last_action}
-                {actionsPastTense[tableState.seats[index].last_action]}
+              {#if tableState.seats[index].lastAction}
+                {tableState.seats[index].lastAction}
               {/if}
               {#if tableState.seats[index].heap > 0}
                 {tableState.seats[index].heap.toLocaleString()}<span class="currency">元</span>
@@ -825,7 +931,7 @@
             </div>
           </div>
         {:else}
-          {#if !mySeat}
+          {#if mySeatIndex == null}
             {#if $player}
               <button on:click={() => sitDown(index)}>Sit here 😊</button>
             {:else}
@@ -838,7 +944,7 @@
     <div class="middle">
       <div class="board">
         {#each (handState.board || []) as card}
-          <img in:fly="{{ y: -25, duration: 450 }}" src="/cards/{card[0].toLowerCase()}{card[1]}.png" class="card" alt="{card[0]}{card[1]}">
+          <img in:fly="{{ y: -25, duration: 450 }}" src="/cards/{card[0].toLowerCase()}{card[1]}.png" class="card {myHand.cards.indexOf(card) !== -1 ? 'best_card' : ''}" alt="{card[0]}{card[1]}">
         {/each}
         {#each Array(5 - (handState.board && handState.board.length || 0)) as _}
           <img src="/cards/empty.png" class="card placeholder" alt="Placeholder">
@@ -849,7 +955,7 @@
         </div>
       </div>
     </div>
-    { participatingSeats }
+    Participating: { seatsWithHolecards }, LargestHeap: { largestHeap }
     {#if mySeat}
       {#if sittingIn}
         <button on:click={() => sitOut()}>Sit Out</button>
@@ -858,39 +964,39 @@
       {/if}
       <button on:click={() => standUp()}>Stand Up</button>
     {/if}
-    <div class="command_panel">
-      {#if myHand}
-        { myHand.descr }
-      {/if}
-
-      <!-- {#if sitting()} -->
-        <div class="bet_settings">
-          <label>
-            {#each myCards as card}
-              <img in:fly={{y: -20}} class="card1" alt="Card" src="/cards/{card.toLowerCase()}.png">
-            {/each}          
-            <input type=number bind:value={raiseTo} min={tableState.hand && tableState.hand.minraise_to} max={mySeat && mySeat.stack}>
-            <!-- <button on:click={() => raiseTo = tableState.hand && tableState.hand.minraise_to}>Min</button> -->
-            <input class="bet" type=range bind:value={raiseTo} min={tableState.hand && tableState.hand.minraise_to} max={mySeat && mySeat.stack}>
-            <!-- <button on:click={() => raiseTo = mySeat && mySeat.stack}>Max</button> -->
-          </label>
-        </div>
-        <!-- {#if tableState.hand && mySeatIndex === tableState.hand.acting_player} -->
-          <div class="btn fold" on:click={() => fold()} disabled={!isMyTurn}>Fold</div>
-          {#if tableState.hand && mySeat && tableState.hand.max_commitment == mySeat.heap}
-            <div class="btn check" on:click={() => check()} disabled={!isMyTurn}>Check</div>
-          {:else}
-            <div class="btn call" on:click={() => call()} disabled={!isMyTurn}>Call {tableState.hand && tableState.hand.max_commitment}</div>
-          {/if}
-          {#if tableState.hand && tableState.hand.max_commitment == 0}
-            <div class="btn bet" on:click={() => bet(raiseTo)} disabled={!isMyTurn}>Bet {raiseTo}</div>
-          {:else}
-            <div class="btn raise" on:click={() => raise(raiseTo)} disabled={!isMyTurn}>Raise To {raiseTo}</div>
-          {/if}
-          <!-- {/if} -->
-        
-        
-      <!-- {/if} -->
-    </div>
+    {#if mySeat}
+      <div class="command_panel">
+        {#if myHand}
+          <p on:mouseenter={() => highlightMyHand = true} on:mouseout={() => highlightMyHand = false}>{ myHand.descr }</p>
+        {/if}
+        <!-- {#if sitting()} -->
+          <div class="bet_settings">
+            <label>
+              {#each myCards as card}
+                <img in:fly={{y: -20}} class="card1 {myHand.cards.indexOf(card) !== -1 ? 'best_card' : ''}" alt="Card" src="/cards/{card.toLowerCase()}.png">
+              {/each}<br>   
+              <input type=number bind:value={raiseTo} min={minRaiseTo} max={mySeat && mySeat.stack}>
+              <!-- <button on:click={() => raiseTo = minRaiseTo}>Min</button> -->
+              <input class="bet" type=range bind:value={raiseTo} min={minRaiseTo} max={mySeat && mySeat.stack}>
+              <!-- <button on:click={() => raiseTo = mySeat && mySeat.stack}>Max</button> -->
+            </label>
+          </div>
+          <!-- {#if tableState.hand && mySeatIndex === tableState.hand.acting_player} -->
+            <div class="btn {isMyTurn ? '' : 'disabled'} fold" on:click={() => fold()}>Fold</div>
+            {#if mySeat && largestHeap == mySeat.heap}
+              <div class="btn {isMyTurn ? '' : 'disabled'} check" on:click={() => check()}>Check</div>
+            {:else}
+              <div class="btn {isMyTurn ? '' : 'disabled'} call" on:click={() => call()}>Call {largestHeap - mySeat.heap}</div>
+            {/if}
+            
+            {#if largestHeap == 0}
+              <div class="btn {isMyTurn ? '' : 'disabled'} bet" on:click={() => bet(raiseTo)}>Bet {raiseTo} {#if mySeat && raiseTo == mySeat.stack}(All-In){/if}</div>
+            {:else}
+              <div class="btn {isMyTurn ? '' : 'disabled'} raise" on:click={() => raise(raiseTo)}>Raise To {raiseTo}</div>
+            {/if}
+            <!-- {/if} -->
+        <!-- {/if} -->
+      </div>
+    {/if}
   </div>
 </div>
