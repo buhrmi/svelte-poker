@@ -1,20 +1,6 @@
 # Svelte Poker 
 
-A poker frontend built with [Svelte](https://svelte.dev)/[Sapper](https://sapper.svelte.dev). Currently in development, not ready for public consumption. Requires proprietary backend. Support for more backends might be added in the future.
-
-## Try it
-
-```bash
-npx degit "buhrmi/svelte-poker" viewer
-cd viewer
-npm install # or yarn!
-npm run dev
-```
-
-or
-
-[![Deploy to now](https://deploy.now.sh/static/button.svg)](https://deploy.now.sh/?repo=https://github.com/buhrmi/svelte-poker&env=API_URL&env=GAME_SERVER_URL)
-
+This project serves as an example client implementation for the [Rock Solid Poker](https://rocksolidpoker.net) API written in [Svelte](https://svelte.dev).
 
 ## Progress
 
