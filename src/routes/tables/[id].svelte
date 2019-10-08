@@ -1003,7 +1003,6 @@
     {/each}
     <div class="middle">
       <div class="board">
-        {winningCards}
         {#each (handState.board || []) as card}        
           <img in:fly="{{ y: -25, duration: 450 }}" src="/cards/{card.toLowerCase()}.png" class="card {winningCards.indexOf(card) !== -1 ? 'winning_card' : ''} {myHand && myHand.cards.toString().indexOf(card) !== -1 ? 'best_card' : ''}" alt="{card}">
         {/each}

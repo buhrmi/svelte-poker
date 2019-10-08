@@ -82,7 +82,7 @@ nav {
       {/if}
     </div>
     <div class="player">
-      {#if $player}
+      {#if $player.nick}
         <div on:click={() => showDashboard ^= true}>
           {$player.nick}
           <img src="{$player.profile_pic}" alt="" class="profile_pic">
@@ -98,7 +98,7 @@ nav {
 <slot></slot>
 
 <div class="playerinfo">
-  {#if $player}
+  {#if $player.nick}
     {$player.nick} balance: {$player.balances.BTC}
     <button on:click={() => showDashboard = true}>Top Up</button>  
   {:else}
