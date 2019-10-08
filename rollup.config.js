@@ -19,7 +19,7 @@ const dedupe = importee => importee === 'svelte' || importee.startsWith('svelte/
 const replacements = {
 	'process.env.NODE_ENV': JSON.stringify(mode),
 	'process.env.API_URL': JSON.stringify(api),
-	'process.env.GAME_SERVER_URL': JSON.stringify(gameServer)
+	'process.env.ENGINE_URL': JSON.stringify(gameServer)
 }
 
 const aliases = {

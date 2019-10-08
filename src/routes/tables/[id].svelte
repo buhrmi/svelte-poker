@@ -147,7 +147,7 @@
   let timerStroke = 339.292;
   let chatMessage = '';
   let tab = 'chat';
-  let gameServer = process.env.GAME_SERVER_URL
+  let gameServer = process.env.ENGINE_URL
   let chatLog = []
   let statusDiv
 
@@ -232,7 +232,7 @@
     dealer: 0
   }
 
-  if (true) {
+  if (false) {
     handState.board = ['Ks', '3h']
     handState.participants = [
       {player_id:1, seat: 0, has_holecards:true}
