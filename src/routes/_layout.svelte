@@ -1,6 +1,6 @@
 <script context="module">
   export async function preload(page, session) {
-    let playerData = null
+    let playerData = {}
     try {
       const url = process.env.API_URL+'/me.json'
       const res = await this.fetch(url, {
