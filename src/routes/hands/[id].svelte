@@ -15,20 +15,18 @@ export async function preload(page, session) {
 <script>
   import { onMount } from 'svelte';
   import Table from '../../components/table.svelte';
-  import createTableState from '../../stores/tableState.js'
 
   export let history;
-  
+  let table;
+
   // Build initial table state from hand history object
-  const initial = {seats: Array(history.table_size)}
+  const initialTableState = {seats: Array(history.table_size)}
   for (const player of history.players) {
     player.stack = player.starting_stack;
     player.bet = 0;
-    initial.dealerSeat = history.dealer_seat;
-    initial.seats[player.seat] = player;
+    initialTableState.dealerSeat = history.dealer_seat;
+    initialTableState.seats[player.seat] = player;
   }
-
-  const tableState = createTableState(initial);
 
   let currentRoundIndex = 0;
   let currentActionIndex = 0;
@@ -38,7 +36,7 @@ export async function preload(page, session) {
   $: firstAction = history.rounds[0].actions[0];
   $: lastRound = history.rounds[history.rounds.length-1];
   $: lastAction = lastRound.actions[lastRound.actions.length-1];
-  $: { // nextAction =
+  $: {
     if (currentAction == lastAction) {
       nextAction == null
     }
@@ -49,19 +47,18 @@ export async function preload(page, session) {
       nextAction = currentRound.actions[currentActionIndex + 1]
     }
   }
-  $: { // $tableState.nextSeat =
-    if (nextAction) {
-      // currently crashes with an error on the console.
-      // $tableState.nextSeat = tableState.getSeatByPlayerId(nextAction.player_id)
+  $: {
+    if (nextAction) {      
+      if (table) table.state.nextSeat = table.getSeatByPlayerId(nextAction.player_id)
     }
     else {
-      // $tableState.nextSeat = null
+      if (table) table.state.nextSeat = null
     }
   }
   
   // Automatically perform the very first action in hand history
   onMount(function() {
-    tableState.perform(currentAction);  
+    table.perform(currentAction);  
   });
 
   function performNextAction() {
@@ -71,7 +68,7 @@ export async function preload(page, session) {
       currentActionIndex = 0;
     }
 
-    tableState.perform(history.rounds[currentRoundIndex].actions[currentActionIndex]);
+    table.perform(history.rounds[currentRoundIndex].actions[currentActionIndex]);
   }
 
   function prevAction() {
@@ -88,12 +85,12 @@ export async function preload(page, session) {
 
   // Resets the table state and performs every action until we reach roundIndex, actionIndex
   function performTo(roundIndex, actionIndex) {
-    tableState.reset();
+    table.reset();
     for (let ri = 0; ri <= roundIndex; ri++) {
       const round = history.rounds[ri];
       for (let ai = 0; ai <= (ri == roundIndex ? actionIndex : round.actions.length - 1); ai++) {
         const action = round.actions[ai];
-        tableState.perform(action);
+        table.perform(action);
       }
     }
   }
@@ -103,4 +100,4 @@ export async function preload(page, session) {
 <button disabled={currentAction == firstAction} on:click={prevAction}>&lt;</button>
 <button disabled={currentAction == lastAction} on:click={performNextAction}>&gt;</button> (Round: {currentRound.street}, Action: {currentActionIndex})
 
-<Table {tableState}></Table>
+<Table bind:this={table} state={initialTableState}></Table>
