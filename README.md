@@ -1,6 +1,9 @@
 # Svelte Poker 
 
-This project serves as an example client implementation for the [Rock Solid Poker](https://rocksolidpoker.net) API written in [Svelte](https://svelte.dev).
+This is a hand history viewer for [Standardized Hand Histories](https://hh-specs.handhistory.org).
+
+Currently it loads a Hand History from a URL, sets an initial table state (implemented as a [Svelte Store](https://svelte.dev/docs#svelte_store)), and iterates over [action objects](https://hh-specs.handhistory.org/action-object/action_obj) contained in the history. Each action mutates the table state, which triggers [Svelte transitions and effects](https://svelte.dev/tutorial/transition).
+
 
 ## Progress
 

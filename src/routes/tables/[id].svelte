@@ -1,7 +1,7 @@
 <script>
 
   import Chips from '../../components/chips.svelte';
-  import { player } from '../../stores';
+  import player from '../../stores/player';
   import { onDestroy, tick, onMount } from 'svelte';
   import { stores } from '@sapper/app';
   import { fly, fade } from 'svelte/transition';
@@ -447,25 +447,6 @@
         chatLog.push({type: 'action', text: ' '})  
       }
 
-      if (data.action == 'Stands Up') {
-        let seat = getSeatIndexFromID(data.player_id)
-        tableState.seats[seat] = {}
-        if (seat == mySeatIndex) myCards = []
-        tableState.seats = tableState.seats
-      }
-
-      if (data.action == 'Sits Down') {
-        let seat = getSeatIndexFromID(data.player_id)
-        tableState.seats[seat] = {player_id: data.player_id, heap: 0, stack: 0}
-        tableState.seats = tableState.seats
-      }
-
-      if (data.action == 'Added Chips') {
-        let seat = getSeatIndexFromID(data.player_id)
-        tableState.seats[seat].stack = data.amount
-        tableState.seats = tableState.seats
-      }
-
       // XXX: use standardized hand history
       if (data.type == 'sit-in') {
         tableState.seats[data.seat].sitting_in = true 
@@ -492,23 +473,7 @@
         chatLog.push({type: 'action', from: $player.id, text: `was dealt ${data.secret}`})
       }
 
-      if (data.action == 'Post SB') {
-        let seat = getSeatIndexFromID(data.player_id)
-        tableState.seats[seat].heap += data.amount
-        tableState.seats[seat].stack -= data.amount
-        tableState.seats[seat].lastAction = 'Posted SB: '
-        chatLog.push({type: 'action', from: data.player_id, text: `posts small blind ${data.amount}`})
-        chatLog = chatLog
-      }
-
-      if (data.action == 'Post BB') {
-        let seat = getSeatIndexFromID(data.player_id)
-        tableState.seats[seat].heap += data.amount
-        tableState.seats[seat].stack -= data.amount
-        tableState.seats[seat].lastAction = 'Posted BB: '
-        chatLog.push({type: 'action', from: data.player_id, text: `posts big blind ${data.amount}`})
-        chatLog = chatLog
-      }
+    
 
       if (data.type == 'betting-round-started') {
         handState.board = data.board
@@ -534,52 +499,7 @@
         tableState.seats.map((seat) => seat.heap = 0)
       }
 
-      if (data.action == 'Fold') {
-        // If we get a fold message, 
-        let seat = getSeatIndexFromID(data.player_id)
-        for (let i = 0; i < handState.participants.length; i++) {
-          const p = handState.participants[i];
-          if (p && p.seat == seat) handState.participants[i].has_holecards = false
-        }
-        tableState.seats[seat].lastAction = 'Folded'
-        if (seat == mySeatIndex) myCards = []
-        chatLog.push({type: 'action', from: data.player_id, text: `folded`})
-        chatLog = chatLog
-      }
 
-      if (data.action == 'Raise') {
-        let seat = getSeatIndexFromID(data.player_id)
-        let raiseTo = largestHeap + data.amount
-        let diff = raiseTo - tableState.seats[seat].heap
-        tableState.seats[seat].heap = raiseTo
-        tableState.seats[seat].stack -= diff
-        tableState.seats[seat].lastAction = 'Raised: '
-        minRaiseTo = data.amount + tableState.seats[seat].heap
-        chatLog.push({type: 'action', from: data.player_id, text: `raises ${data.amount} to ${raiseTo}`})
-        chatLog = chatLog
-      }
-
-      if (data.action == 'Check') {
-        chatLog.push({type: 'action', from: data.player_id, text: `checks`})
-        chatLog = chatLog
-      }
-
-      if (data.action == 'Call') {
-        tableState.seats[seat].heap += data.amount
-        tableState.seats[seat].stack -= data.amount
-        tableState.seats[seat].lastAction = 'Called: '
-        chatLog.push({type: 'action', from: data.player_id, text: `calls ${data.amount}`})
-        chatLog = chatLog
-      }
-
-      if (data.action == 'bet') {
-        tableState.seats[data.seat].heap += data.amount
-        tableState.seats[data.seat].stack -= data.amount
-        tableState.seats[data.seat].lastAction = 'Bet: '
-        chatLog.push({type: 'action', from: data.player_id, text: `bets ${data.amount}`})
-        chatLog = chatLog
-        minRaiseTo = data.amount * 2
-      }
 
       if (data.type == 'waiting-for-next-round-to-start') {
         
@@ -945,7 +865,6 @@
   </div>
 
   <div class="cog" class:is-active={sidebarOpened} on:click={() => sidebarOpened = !sidebarOpened}></div>
-
   <div class="table {highlightMyHand ? 'highlighting_my_best' : ''}">
     {#each Array(tableState.seats.length) as _, index}
       <div bind:this={seatElements[index]} class="seat seat_{rotatedSeatIndicies[index]}">
@@ -1025,17 +944,16 @@
         </div>
       </div>
     </div>
-    <!-- Participating: { JSON.stringify(seatsWithHolecards) }, LargestHeap: { largestHeap }, {myHand.cards} -->
-    {#if mySeat}
+    <!-- Participating: { JSON.stringify(seatsWithHolecards) }, LargestHeap: { largestHeap }, {playersCards.cards} -->
+  </div>
+   {#if mySeat}
       {#if sittingIn}
         <button on:click={() => sitOut()}>Sit Out</button>
       {:else}
         <button on:click={() => sitIn()}>Sit In</button>
       {/if}
       <button on:click={() => standUp()}>Stand Up</button>
-    {/if}
 
-    {#if mySeat}
       <div class="command_panel">
         {#if myHand}
           <p on:mouseenter={() => highlightMyHand = true} on:mouseout={() => highlightMyHand = false}>{ myHand.descr }</p>
@@ -1069,5 +987,4 @@
         <!-- {/if} -->
       </div>
     {/if}
-  </div>
 </div>

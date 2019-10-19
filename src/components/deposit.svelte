@@ -1,6 +1,6 @@
 <script>
 import { onDestroy } from 'svelte';
-import { player } from '../stores.js';
+import player from '../stores/player.js';
 
 let interval
 async function fakeDeposit() {

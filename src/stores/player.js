@@ -4,7 +4,7 @@ const player = writable({})
 
 player.reload = async function(params) {
   try {
-    let url = process.env.API_URL+'/me.json'
+    let url = process.env.API_URL + '/me.json'
     if (params) {
       url += '?'
       for (const param in params) {
@@ -27,4 +27,4 @@ if (typeof window !== 'undefined') {
   setInterval(player.reload, 10000)
 }
 
-export { player };
+export default player;
