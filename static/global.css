@@ -86,7 +86,6 @@ p.thought:after {
 }
 
 .btn {
-	width: 30%;
 	cursor: pointer;
 	box-shadow:inset 0px 1px 0px 0px #ffffff;
 	background:linear-gradient( center top, #ededed 5%, #dfdfdf 100% );

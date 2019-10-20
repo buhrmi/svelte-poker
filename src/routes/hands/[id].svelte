@@ -13,7 +13,8 @@ export async function preload(page, session) {
 </script>
 
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
+  import player from '../../stores/player';
   import Table from '../../components/table.svelte';
 
   export let history;
@@ -37,48 +38,49 @@ export async function preload(page, session) {
   $: lastRound = history.rounds[history.rounds.length-1];
   $: lastAction = lastRound.actions[lastRound.actions.length-1];
   $: {
-    if (currentAction == lastAction) {
-      nextAction == null
+    if (currentRoundIndex == history.rounds.length-1 && currentActionIndex == history.rounds[history.rounds.length - 1].actions.length -1) {
+      nextAction = null
     }
-    if (currentActionIndex == currentRound.actions.length) {
+    else if (currentActionIndex == history.rounds[currentRoundIndex].actions.length-1) {
       nextAction == history.rounds[currentRoundIndex + 1].actions[0]
     }
     else {
-      nextAction = currentRound.actions[currentActionIndex + 1]
+      nextAction = history.rounds[currentRoundIndex].actions[currentActionIndex + 1]
     }
   }
   $: {
-    if (nextAction) {      
-      if (table) table.state.nextSeat = table.getSeatByPlayerId(nextAction.player_id)
-    }
-    else {
-      if (table) table.state.nextSeat = null
+    if (table) {
+      if (nextAction) table.state.nextSeat = table.getSeatByPlayerId(nextAction.player_id)
+      else table.state.nextSeat = null
     }
   }
   
   // Automatically perform the very first action in hand history
   onMount(function() {
-    table.perform(currentAction);  
+    table.perform(currentAction);
   });
 
   function performNextAction() {
     currentActionIndex++;
     if (currentActionIndex == currentRound.actions.length) {
       currentRoundIndex++;
-      currentActionIndex = 0;
+      currentActionIndex = -1;
+      table.startRound(history.rounds[currentRoundIndex]);
+    }
+    else {
+      table.perform(history.rounds[currentRoundIndex].actions[currentActionIndex]);
     }
 
-    table.perform(history.rounds[currentRoundIndex].actions[currentActionIndex]);
   }
 
-  function prevAction() {
+  function performToPreviousAction() {
     // Dont do anything if on the first action in the history
     if (currentRoundIndex == 0 && currentActionIndex == 0) return;
 
     currentActionIndex--;
-    if (currentActionIndex == -1) {
+    if (currentActionIndex < -1) {
       currentRoundIndex--;
-      currentActionIndex = currentRound.actions.length - 1;
+      currentActionIndex = history.rounds[currentRoundIndex].actions.length - 1;
     }
     performTo(currentRoundIndex, currentActionIndex)
   }
@@ -86,18 +88,91 @@ export async function preload(page, session) {
   // Resets the table state and performs every action until we reach roundIndex, actionIndex
   function performTo(roundIndex, actionIndex) {
     table.reset();
+    table.animations = false;
     for (let ri = 0; ri <= roundIndex; ri++) {
       const round = history.rounds[ri];
+      table.startRound(round);
       for (let ai = 0; ai <= (ri == roundIndex ? actionIndex : round.actions.length - 1); ai++) {
         const action = round.actions[ai];
         table.perform(action);
       }
     }
+    currentRoundIndex = roundIndex;
+    currentActionIndex = actionIndex;
+    tick().then(() => table.animations = true)
   }
 
 </script>
 
-<button disabled={currentAction == firstAction} on:click={prevAction}>&lt;</button>
-<button disabled={currentAction == lastAction} on:click={performNextAction}>&gt;</button> (Round: {currentRound.street}, Action: {currentActionIndex})
+<style lang="scss">
+.main_area {
+  position: fixed;
+  height: 100vh;
+  width: 70vw;
+  left: 30vw;
+}
+.history {
+  position: fixed;
+  height: 100vh;
+  width: 30vw;
+  left: 0;
+  background-image: url('/wood.png');
+  color: white;
+  .action {
+    padding: 2px;
+    padding-left: 16px;
+    position: relative;
+    cursor: pointer;
+    &:hover {
+      background-color: rgba(255,255,255,0.1);
+    }
+    &.active:before {
+      content: '▶';
+      position: absolute;
+      left: 0px;
+    }
+  }
+}
+.ui_layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  color: white;
+  .panel {
+    position: absolute;
+    bottom: 0;
+  }
+}
+</style>
 
-<Table bind:this={table} state={initialTableState}></Table>
+<div class="history">
+  {#each history.rounds as round, roundIndex}
+    <div class="round">
+      <div on:click={() => {performTo(roundIndex, -1)}} class="action" class:active={currentRoundIndex == roundIndex && currentActionIndex == -1}>*** {round.street == 'preflop' ? 'HOLE CARDS' : round.street.toUpperCase()} ***</div>
+      {#each round.actions as action, actionIndex}
+        <div on:click={() => {performTo(roundIndex, actionIndex)}} class="action" class:active={currentRoundIndex == roundIndex && currentActionIndex == actionIndex}>
+          {#await player.fetch(action.player_id)}{:then player}{player.nick}{/await}
+          {action.action} {action.amount ? action.amount : ''}
+        </div>
+      {/each}
+    </div>
+  {/each}
+</div>
+
+<div class="main_area">
+  <Table bind:this={table} state={initialTableState}></Table>
+  
+  <div class="ui_layer">
+    <div class="panel">
+      <button class="btn" on:click={performToPreviousAction}>&lt; Rewind</button>
+      <button class="btn" on:click={performNextAction}>Next &gt;</button> (Round: {currentRound.street}, Action: {currentActionIndex})
+      <div class="debug">
+        Player: {$player.nick}<br>
+        state: {JSON.stringify(table ? table.state : {})}
+      </div>
+    </div>
+  </div>
+</div>
+

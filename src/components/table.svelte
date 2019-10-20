@@ -2,9 +2,13 @@
 
 <script>
 import player from '../stores/player';
+import { fly, fade } from 'svelte/transition';
+import { createEventDispatcher } from 'svelte';
+const dispatch = createEventDispatcher();
 
+export let state;
 const defaultState = {
-	seats: [],
+  seats: [],
 	board: [],
 	nextSeat: null,
 	dealerSeat: null,
@@ -12,11 +16,14 @@ const defaultState = {
 	pot: 0
 };
 
-export let state;
+const initialState = JSON.parse(JSON.stringify(state || defaultState));
 
-const initialState = JSON.parse(JSON.stringify(state));
+export let animations = true;
+function duration(time) { return animations ? time : 0 }
 
-export function reset() {
+
+export function reset(newInitialState) {
+  if (newInitialState) initialState = newInitialState;
   state = Object.assign({}, defaultState, JSON.parse(JSON.stringify(initialState)));
 }
 
@@ -25,7 +32,7 @@ reset();
 export function getSeatByPlayerId(playerId) {
   for (let index = 0; index < state.seats.length; index++) {
     const seat = state.seats[index];
-    if (seat && seat.player_id == playerId) return index
+    if (seat && seat.id == playerId) return index
   }
 }
 
@@ -33,11 +40,19 @@ let playerSeatIndex;
 $: {
   for (let index = 0; index < state.seats.length; index++) {
     const seat = state.seats[index];
-    if (seat && seat.player_id == $player.id) playerSeatIndex = index;
+    if (seat && seat.id == $player.id) playerSeatIndex = index;
   }
 }
 $: playersCards = playerSeatIndex ? state.seats[playerSeatIndex].cards : null
 
+
+export function startRound(round) {
+  state.board = round.cards
+}
+
+export function setSeats(seats) {
+  state.seats = seats
+}
 
 // See https://hh-specs.handhistory.org/action-object/action for a list of possible actions
 export function perform(action) {
@@ -60,20 +75,19 @@ export function perform(action) {
 
   if (action.action == 'Post SB') {
     let seat = getSeatByPlayerId(action.player_id)
-    state.seats[seat].bet += action.amount
+    state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
     state.seats[seat].lastAction = 'Posted SB'
-    state.bet = state.seats[seat].bet
+    state.maxCommitted = state.seats[seat].committed
   }
 
   if (action.action == 'Post BB') {
     let seat = getSeatByPlayerId(action.player_id)
-    state.seats[seat].bet += action.amount
+    state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
     state.seats[seat].lastAction = 'Posted BB'
-    state.bet = state.seats[seat].bet 
+    state.maxCommitted = state.seats[seat].committed
   }
-
 
   if (action.action == 'Fold') {
     let seat = getSeatByPlayerId(action.player_id)
@@ -85,10 +99,12 @@ export function perform(action) {
     let seat = getSeatByPlayerId(action.player_id)
     
     // If a player faces a $50 bet and raises by $100 to $150, the amount is $150.
-    state.seats[seat].bet += action.amount
+    let oldMaxCommited = state.maxCommitted
+    state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
     state.seats[seat].lastAction = 'Raise'
-    state.bet = state.seats[seat].bet
+    state.maxCommitted = state.seats[seat].committed
+    state.minRaise = state.maxCommitted - oldMaxCommitted
   }
 
   if (action.action == 'Check') {
@@ -97,33 +113,21 @@ export function perform(action) {
 
   if (action.action == 'Call') {
     let seat = getSeatByPlayerId(action.player_id)
-    state.seats[seat].bet += action.amount
+    state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
     state.seats[seat].lastAction = 'Called'
-    state.bet = state.seats[seat].bet
-    
+    state.maxCommitted = state.seats[seat].committed
   }
 
-  if (action.action == 'Bets') {
+  if (action.action == 'Bet') {
     let seat = getSeatByPlayerId(action.player_id)
-    state.seats[seat].bet += action.amount
+    state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
-    state.seats[seat].lastAction = 'Bet'			
+    state.seats[seat].lastAction = 'Bet'
+    state.maxCommitted = state.seats[seat].committed
+    state.minRaise = action.amount
   }
 
-  // trigger reactivity
-  state = state
-}
-
-
-
-const cachedPlayerData = {}
-async function playerData(playerId) {
-  if (typeof window == 'undefined') return
-  if (cachedPlayerData[playerId]) return cachedPlayerData[playerId];
-  const res = await fetch(process.env.API_URL+`/players/${playerId}.json`)
-  const json = await res.json()
-  return cachedPlayerData[playerId] = json
 }
 
 </script>
@@ -132,38 +136,64 @@ async function playerData(playerId) {
 .table {
   background-image: url('/felt.png');
   color: white;
+  height: 100%;
+  width: 100%;
+  // background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.1) 70%,rgba(0,0,0,0.3) 100%);
 }
 .seat {
-  padding: 4px 12px;
-  border: 1px solid black;
+  position: absolute;
   &.active {
     border: 1px solid yellow;
   }
-}
-.profile_pic {
-  margin-top: 4px;
-  width: 50px;
-  height: 50px;
-  border-radius: 100px;
-  vertical-align: middle;
-  box-shadow: -1px 1px 2px rgba(0,0,0,0.5);
+  .profile_pic {
+    width: 50px;
+    height: 50px;
+    border-radius: 100px;
+    vertical-align: middle;
+    box-shadow: -1px 1px 2px rgba(0,0,0,0.5);
+  }
+  &.seat_0 {
+    left: 15px;
+    top: calc(0px + 120px);
+  }
+  &.seat_1 {
+    right: 15px;
+    top: calc(0px + 120px);
+  }
+  &.seat_2 {
+    right: 15px;
+    top: calc(90px + 120px);
+  }
+  &.seat_3 {
+    right: 15px;
+    top: calc(180px + 120px);
+  }
+  &.seat_4 {
+    left: 15px;
+    top: calc(180px + 120px);
+  }
+  &.seat_5 {
+    left: 15px;
+    top: calc(90px + 120px);
+  }
 }
 </style>
 
-Player: {$player.nick}<br>
-state: {JSON.stringify(state)}
-
 <div class="table">  
   <div class="board">
-    Board: {JSON.stringify(state.board)}, Pot: {state.pot}
+    {#each state.board as boardCard}
+      <img in:fly="{{ y: -25, duration: duration(450) }}" src="/cards/{boardCard.toLowerCase()}.png">
+    {/each}
+  </div>
+  <div class="pot">
   </div>
   {#each Array(state.seats.length) as _, index}
-    <div class="seat {state.nextSeat == index ? 'active' : ''}">
+    <div class="seat seat_{index}" class:active={state.nextSeat == index}>
       {#if state.dealerSeat == index}
         <div class="button">DEALER</div>
       {/if}
       {#if state.seats[index]}
-        {#await playerData(state.seats[index].player_id)}
+        {#await player.fetch(state.seats[index].id)}
           loading...
         {:then player}
           <img src={player.profile_pic} alt={player.nick} class="profile_pic"> {player.nick}
@@ -171,9 +201,9 @@ state: {JSON.stringify(state)}
           error
         {/await}
         {state.seats[index].lastAction || ''}
-        Bet: {state.seats[index].bet}, Stack: {state.seats[index].stack}, 
+        Bet: {state.seats[index].committed}, Stack: {state.seats[index].stack}, 
       {:else}
-        Seat {index}
+        <button class="btn" on:click={() => dispatch('sitDown', index)}>Empty Seat</button>
       {/if}
     </div>
   {/each}
