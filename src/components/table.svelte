@@ -10,7 +10,7 @@ export let state;
 const defaultState = {
   seats: [],
 	board: [],
-	nextSeat: null,
+	activeSeatIndex: null,
 	dealerSeat: null,
 	bet: 0,
 	pot: 0
@@ -32,47 +32,27 @@ reset();
 export function getSeatByPlayerId(playerId) {
   for (let index = 0; index < state.seats.length; index++) {
     const seat = state.seats[index];
-    if (seat && seat.id == playerId) return index
+    if (seat && seat.player_id == playerId) return index
   }
 }
 
-let playerSeatIndex;
+let playersSeatIndex;
 $: {
   for (let index = 0; index < state.seats.length; index++) {
     const seat = state.seats[index];
-    if (seat && seat.id == $player.id) playerSeatIndex = index;
+    if (seat && seat.player_id == $player.id) playersSeatIndex = index;
   }
 }
-$: playersCards = playerSeatIndex ? state.seats[playerSeatIndex].cards : null
+$: playersSeat = state.seats[playersSeatIndex]
+$: playersCards = playersSeat ? playersSeat.cards : null
 
 
 export function startRound(round) {
   state.board = round.cards
 }
 
-export function setSeats(seats) {
-  state.seats = seats
-}
-
 // See https://hh-specs.handhistory.org/action-object/action for a list of possible actions
 export function perform(action) {
-  console.log('mutating with', action)
-
-  if (action.action == 'Stands Up') {
-    let seat = getSeatByPlayerId(action.player_id)	
-    state.seats[seat] = {}
-  }
-
-  if (action.action == 'Sits Down') {
-    let seat = getSeatByPlayerId(action.player_id)
-    state.seats[seat] = {player_id: action.player_id, bet: 0, stack: 0, cards: null}
-  }
-
-  if (action.action == 'Added Chips') {
-    let seat = getSeatByPlayerId(action.player_id)
-    state.seats[seat].stack += action.amount
-  }
-
   if (action.action == 'Post SB') {
     let seat = getSeatByPlayerId(action.player_id)
     state.seats[seat].committed += action.amount
@@ -179,7 +159,7 @@ export function perform(action) {
 }
 </style>
 
-<div class="table">  
+<div class="table">
   <div class="board">
     {#each state.board as boardCard}
       <img in:fly="{{ y: -25, duration: duration(450) }}" src="/cards/{boardCard.toLowerCase()}.png">
@@ -188,12 +168,12 @@ export function perform(action) {
   <div class="pot">
   </div>
   {#each Array(state.seats.length) as _, index}
-    <div class="seat seat_{index}" class:active={state.nextSeat == index}>
+    <div class="seat seat_{index}" class:active={state.activeSeatIndex == index}>
       {#if state.dealerSeat == index}
         <div class="button">DEALER</div>
       {/if}
       {#if state.seats[index]}
-        {#await player.fetch(state.seats[index].id)}
+        {#await player.fetch(state.seats[index].player_id)}
           loading...
         {:then player}
           <img src={player.profile_pic} alt={player.nick} class="profile_pic"> {player.nick}
@@ -201,7 +181,10 @@ export function perform(action) {
           error
         {/await}
         {state.seats[index].lastAction || ''}
-        Bet: {state.seats[index].committed}, Stack: {state.seats[index].stack}, 
+        Bet: {state.seats[index].committed}, Stack: {state.seats[index].stack}
+        {#if !state.seats[index].sitting_in}
+          <br>Sitting Out
+        {/if}
       {:else}
         <button class="btn" on:click={() => dispatch('sitDown', index)}>Empty Seat</button>
       {/if}
