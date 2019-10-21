@@ -2,9 +2,29 @@
 
 <script>
 import player from '../stores/player';
-import { fly, fade } from 'svelte/transition';
+import { fly, fade, crossfade } from 'svelte/transition';
+import { quintOut, cubicOut } from 'svelte/easing';
 import { createEventDispatcher } from 'svelte';
+
 const dispatch = createEventDispatcher();
+
+const [send, receive] = crossfade({
+  duration: d => Math.sqrt(d * 1000),
+
+  fallback(node, params) {
+    const style = getComputedStyle(node);
+    const transform = style.transform === 'none' ? '' : style.transform;
+
+    return {
+      duration: 600,
+      easing: quintOut,
+      css: t => `
+        transform: ${transform} scale(${t});
+        opacity: ${t}
+      `
+    };
+  }
+});
 
 export let state;
 const defaultState = {
@@ -36,16 +56,21 @@ export function getSeatByPlayerId(playerId) {
   }
 }
 
-let playersSeatIndex;
-$: {
-  for (let index = 0; index < state.seats.length; index++) {
-    const seat = state.seats[index];
-    if (seat && seat.player_id == $player.id) playersSeatIndex = index;
-  }
-}
-$: playersSeat = state.seats[playersSeatIndex]
-$: playersCards = playersSeat ? playersSeat.cards : null
+// let playersSeatIndex;
+// $: {
+//   for (let index = 0; index < state.seats.length; index++) {
+//     const seat = state.seats[index];
+//     if (seat && seat.player_id == $player.id) playersSeatIndex = index;
+//   }
+// }
+// $: playersSeat = state.seats[playersSeatIndex]
 
+let totalCommitted;
+$: {
+  let result = 0;
+  state.seats.filter(s=>s).map(s => result += s.committed);
+  totalCommitted = result
+}
 
 export function startRound(round) {
   state.board = round.cards
@@ -53,6 +78,11 @@ export function startRound(round) {
 
 // See https://hh-specs.handhistory.org/action-object/action for a list of possible actions
 export function perform(action) {
+  if (action.action == 'Deal Cards') {
+    let seat = getSeatByPlayerId(action.player_id)
+    state.seats[seat].cards = ['?', '?']
+  }
+
   if (action.action == 'Post SB') {
     let seat = getSeatByPlayerId(action.player_id)
     state.seats[seat].committed += action.amount
@@ -110,9 +140,14 @@ export function perform(action) {
 
 }
 
+function seatAlignment(index) {
+  return [1,2,3].indexOf(index) == -1 ? 'left' : 'right'
+}
 </script>
 
 <style lang="scss">
+$profileSize: 50px;
+
 .table {
   background-image: url('/felt.png');
   color: white;
@@ -122,71 +157,182 @@ export function perform(action) {
 }
 .seat {
   position: absolute;
+  height: 0px;
+  width: 0px;
   &.active {
-    border: 1px solid yellow;
+    .profile_pic {
+      box-shadow: 0 0 0px 2px yellow;
+    }
+    .lower_box {
+      box-shadow: 0 0 0px 2px yellow;
+    }
+  }
+  .dealer {
+    width: $profileSize / 2;
+    position: absolute;
+    z-index: 3;
+    box-shadow: 0 0 4px -2px rgba(0,0,0,0.8);
+    border-radius: 10px;
+  }
+  .btn.empty_seat {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 10px;
+    transform: translate(-50%, -50%);
+  }
+  .cards {
+    position: absolute;
+    height: $profileSize;
+    width: $profileSize * 2;
+    bottom: 0;
+    overflow: hidden;
+    .card {
+      width: $profileSize;
+      position: absolute;
+      &.card_1 {
+        left: 0;
+      }
+      &.card_2 {
+        right: 0;
+      }
+    }
+  }
+  .lower_box {
+    position: absolute;
+    width: 160px;
+    background: rgba(0,0,0,0.4);
+    z-index: 0;
+    height: $profileSize / 2;
+    bottom: - $profileSize / 2;
+  }
+  .committed {
+    position: absolute;
+    top: 0;
+  }
+  &.right {
+    .committed {
+      right: 170px;
+    }
+    .cards {
+      right: $profileSize / 2 + 10px;
+    }
+    .lower_box {
+      text-align: right;
+      padding-right: $profileSize / 2 + 5px;
+      right: 0;
+      border-top-left-radius: 100px;
+      border-bottom-left-radius: 100px;
+    }
+  }
+  &.left {
+    .committed {
+      left: 170px;
+    }
+    .cards {
+      left: $profileSize / 2 + 10px;
+    }
+    .lower_box {
+      text-align: left;
+      padding-left: $profileSize / 2 + 5px;
+      left: 0;
+      border-bottom-right-radius: 100px;
+      border-top-right-radius: 100px;
+    }
   }
   .profile_pic {
+    z-index: 1;
     width: 50px;
     height: 50px;
+    top: 0;
+    left: 0;
+    position: absolute;
+    transform: translate(-50%, -50%);
     border-radius: 100px;
     vertical-align: middle;
     box-shadow: -1px 1px 2px rgba(0,0,0,0.5);
   }
   &.seat_0 {
-    left: 15px;
+    left: $profileSize / 2 + 20px;
     top: calc(0px + 120px);
   }
   &.seat_1 {
-    right: 15px;
+    right: $profileSize / 2 + 20px;
     top: calc(0px + 120px);
   }
   &.seat_2 {
-    right: 15px;
-    top: calc(90px + 120px);
+    right: $profileSize / 2 + 20px;
+    top: calc(120px + 120px);
   }
   &.seat_3 {
-    right: 15px;
-    top: calc(180px + 120px);
+    right: $profileSize / 2 + 20px;
+    top: calc(240px + 120px);
   }
   &.seat_4 {
-    left: 15px;
-    top: calc(180px + 120px);
+    left: $profileSize / 2 + 20px;
+    top: calc(240px + 120px);
   }
   &.seat_5 {
-    left: 15px;
-    top: calc(90px + 120px);
+    left: $profileSize / 2 + 20px;
+    top: calc(120px + 120px);
   }
 }
 </style>
 
 <div class="table">
+  Board: {state.board}<br>
+  Committed: {totalCommitted}<br>
+  Pot: {state.pot}
+
   <div class="board">
     {#each state.board as boardCard}
-      <img in:fly="{{ y: -25, duration: duration(450) }}" src="/cards/{boardCard.toLowerCase()}.png">
+      <img in:fly="{{ y: -25, duration: duration(450) }}" src="/cards/{boardCard.toLowerCase()}.png" alt={boardCard}>
     {/each}
   </div>
   <div class="pot">
+  
   </div>
   {#each Array(state.seats.length) as _, index}
-    <div class="seat seat_{index}" class:active={state.activeSeatIndex == index}>
+    <div class="seat {seatAlignment(index)} seat_{index}" class:active={state.activeSeatIndex == index}>
       {#if state.dealerSeat == index}
-        <div class="button">DEALER</div>
+        <img class="dealer" in:receive={'dealer'} out:send={'dealer'} src="/button.png" alt="DEALER">
       {/if}
       {#if state.seats[index]}
         {#await player.fetch(state.seats[index].player_id)}
-          loading...
+          Loading Player {state.seats[index].player_id}...
         {:then player}
-          <img src={player.profile_pic} alt={player.nick} class="profile_pic"> {player.nick}
+          {#if state.seats[index].cards}
+            <div class="cards">
+              {#each state.seats[index].cards as card}
+                {#if card == '?'}
+                  <img class="card" alt="?" src="/cards/back.png">
+                {/if}
+              {/each}
+            </div>
+          {/if}
+          <img src={player.profile_pic} alt={player.nick} class="profile_pic">
+          <div class="lower_box">
+            <div class="name">
+              {player.nick}
+            </div>
+            <div class="last_action">
+              {state.seats[index].lastAction || ''}
+            </div>
+            <div class="stack">
+              {state.seats[index].stack}
+            </div>
+          </div>
+          <div class="committed">
+            {state.seats[index].committed}
+          </div>
         {:catch}
-          error
+          Error loading player...
         {/await}
-        {state.seats[index].lastAction || ''}
-        Bet: {state.seats[index].committed}, Stack: {state.seats[index].stack}
         {#if !state.seats[index].sitting_in}
           <br>Sitting Out
         {/if}
       {:else}
-        <button class="btn" on:click={() => dispatch('sitDown', index)}>Empty Seat</button>
+        <button class="empty_seat btn" on:click={() => dispatch('sitDown', index)}>Empty Seat</button>
       {/if}
     </div>
   {/each}

@@ -14,75 +14,84 @@ export async function preload(page, session) {
 
 <script>
   import { onMount, tick } from 'svelte';
+  import { writable } from 'svelte/store'
   import player from '../../stores/player';
   import Table from '../../components/table.svelte';
 
   export let history;
   let table;
+  
 
   // Build initial table state from hand history object
-  const initialTableState = {seats: Array(history.table_size)}
+  let tableState = {seats: Array(history.table_size)}
   for (const player of history.players) {
     player.stack = player.starting_stack;
-    player.bet = 0;
-    initialTableState.dealerSeat = history.dealer_seat;
-    initialTableState.seats[player.seat] = player;
+    player.committed = 0;
+    player.player_id = player.id
+    player.sitting_in = true
+    tableState.dealerSeat = history.dealer_seat;
+    tableState.seats[player.seat] = player;
   }
+  const historyPosition = writable({round: 0, action: 0});
+  onMount(function() {
+    if (window.location.hash) {
+      let str = window.location.hash.substr(1)
+      // for some reason, calling performTo during the mount process, results in an error
+      tick().then(() => performTo(parseInt(str.split(',')[0]), parseInt(str.split(',')[1])))
+    }
+    else {
+      tick().then(() => performTo(0,0))
+    }
+    historyPosition.subscribe(function(position) {
+      window.location.hash = "#" + position.round + ',' + position.action
+    })
+  })
 
-  let currentRoundIndex = 0;
-  let currentActionIndex = 0;
   let nextAction;
-  $: currentRound = history.rounds[currentRoundIndex];
-  $: currentAction = currentRound.actions[currentActionIndex];
+  $: currentRound = history.rounds[$historyPosition.round];
+  $: currentAction = currentRound.actions[$historyPosition.action];
   $: firstAction = history.rounds[0].actions[0];
   $: lastRound = history.rounds[history.rounds.length-1];
   $: lastAction = lastRound.actions[lastRound.actions.length-1];
   $: {
-    if (currentRoundIndex == history.rounds.length-1 && currentActionIndex == history.rounds[history.rounds.length - 1].actions.length -1) {
+    if ($historyPosition.round == history.rounds.length-1 && $historyPosition.action == history.rounds[history.rounds.length - 1].actions.length -1) {
       nextAction = null
     }
-    else if (currentActionIndex == history.rounds[currentRoundIndex].actions.length-1) {
-      nextAction == history.rounds[currentRoundIndex + 1].actions[0]
+    else if ($historyPosition.action == history.rounds[$historyPosition.round].actions.length-1) {
+      nextAction == history.rounds[$historyPosition.round + 1].actions[0]
     }
     else {
-      nextAction = history.rounds[currentRoundIndex].actions[currentActionIndex + 1]
+      nextAction = history.rounds[$historyPosition.round].actions[$historyPosition.action + 1]
     }
-  }
-  $: {
     if (table) {
-      if (nextAction) table.state.nextSeat = table.getSeatByPlayerId(nextAction.player_id)
-      else table.state.nextSeat = null
+      if (nextAction) tableState.activeSeatIndex = table.getSeatByPlayerId(nextAction.player_id)
+      else tableState.activeSeatIndex = null
     }
   }
-  
-  // Automatically perform the very first action in hand history
-  onMount(function() {
-    table.perform(currentAction);
-  });
 
   function performNextAction() {
-    currentActionIndex++;
-    if (currentActionIndex == currentRound.actions.length) {
-      currentRoundIndex++;
-      currentActionIndex = -1;
-      table.startRound(history.rounds[currentRoundIndex]);
+    $historyPosition.action++;
+    if ($historyPosition.action == currentRound.actions.length) {
+      $historyPosition.round++;
+      $historyPosition.action = -1;
+      table.startRound(history.rounds[$historyPosition.round]);
     }
     else {
-      table.perform(history.rounds[currentRoundIndex].actions[currentActionIndex]);
+      table.perform(history.rounds[$historyPosition.round].actions[$historyPosition.action]);
     }
 
   }
 
   function performToPreviousAction() {
     // Dont do anything if on the first action in the history
-    if (currentRoundIndex == 0 && currentActionIndex == 0) return;
+    if ($historyPosition.round == 0 && $historyPosition.action == 0) return;
 
-    currentActionIndex--;
-    if (currentActionIndex < -1) {
-      currentRoundIndex--;
-      currentActionIndex = history.rounds[currentRoundIndex].actions.length - 1;
+    $historyPosition.action--;
+    if ($historyPosition.action < -1) {
+      $historyPosition.round--;
+      $historyPosition.action = history.rounds[$historyPosition.round].actions.length - 1;
     }
-    performTo(currentRoundIndex, currentActionIndex)
+    performTo($historyPosition.round, $historyPosition.action)
   }
 
   // Resets the table state and performs every action until we reach roundIndex, actionIndex
@@ -97,8 +106,8 @@ export async function preload(page, session) {
         table.perform(action);
       }
     }
-    currentRoundIndex = roundIndex;
-    currentActionIndex = actionIndex;
+    $historyPosition.round = roundIndex;
+    $historyPosition.action = actionIndex;
     tick().then(() => table.animations = true)
   }
 
@@ -133,27 +142,20 @@ export async function preload(page, session) {
     }
   }
 }
-.ui_layer {
+.panel {
   position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  color: white;
-  .panel {
-    position: absolute;
-    bottom: 0;
-  }
+  bottom: 0;
 }
+
 </style>
 
 <div class="history">
   {#each history.rounds as round, roundIndex}
     <div class="round">
-      <div on:click={() => {performTo(roundIndex, -1)}} class="action" class:active={currentRoundIndex == roundIndex && currentActionIndex == -1}>*** {round.street == 'preflop' ? 'HOLE CARDS' : round.street.toUpperCase()} ***</div>
+      <div on:click={() => {performTo(roundIndex, -1)}} class="action" class:active={$historyPosition.round == roundIndex && $historyPosition.action == -1}>*** {round.street == 'preflop' ? 'HOLE CARDS' : round.street.toUpperCase()} ***</div>
       {#each round.actions as action, actionIndex}
-        <div on:click={() => {performTo(roundIndex, actionIndex)}} class="action" class:active={currentRoundIndex == roundIndex && currentActionIndex == actionIndex}>
-          {#await player.fetch(action.player_id)}{:then player}{player.nick}{/await}
+        <div on:click={() => {performTo(roundIndex, actionIndex)}} class="action" class:active={$historyPosition.round == roundIndex && $historyPosition.action == actionIndex}>
+          {#await player.fetch(action.player_id)}loading...{:then player}{player.nick}{/await}
           {action.action} {action.amount ? action.amount : ''}
         </div>
       {/each}
@@ -162,16 +164,14 @@ export async function preload(page, session) {
 </div>
 
 <div class="main_area">
-  <Table bind:this={table} state={initialTableState}></Table>
+  <Table bind:state={tableState} bind:this={table}></Table>
   
-  <div class="ui_layer">
-    <div class="panel">
-      <button class="btn" on:click={performToPreviousAction}>&lt; Rewind</button>
-      <button class="btn" on:click={performNextAction}>Next &gt;</button> (Round: {currentRound.street}, Action: {currentActionIndex})
-      <div class="debug">
-        Player: {$player.nick}<br>
-        state: {JSON.stringify(table ? table.state : {})}
-      </div>
+  <div class="panel">
+    <button class="btn" on:click={performToPreviousAction}>&lt; Rewind</button>
+    <button class="btn" on:click={performNextAction}>Next &gt;</button> (Round: {currentRound.street}, Action: {$historyPosition.action})
+    <div class="debug">
+      Player: {$player.nick}<br>
+      state: {JSON.stringify(tableState)}
     </div>
   </div>
 </div>
