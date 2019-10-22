@@ -7,6 +7,13 @@ Currently it loads a Hand History from a URL, sets an initial table state, and i
 
 ## Progress
 
+2019-10-22
+
+- Hand Replayer
+- New internal Hand History Data Structure (https://hh-specs.handhistory.org)
+
+![](https://i.imgur.com/dTCrsZa.gif)
+
 
 2019-09-26
 

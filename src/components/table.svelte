@@ -5,6 +5,8 @@ import player from '../stores/player';
 import { fly, fade, crossfade } from 'svelte/transition';
 import { quintOut, cubicOut } from 'svelte/easing';
 import { createEventDispatcher } from 'svelte';
+import { vortex } from '@/transitions'
+import Stack from './stack.svelte'
 
 const dispatch = createEventDispatcher();
 
@@ -16,7 +18,7 @@ const [send, receive] = crossfade({
     const transform = style.transform === 'none' ? '' : style.transform;
 
     return {
-      duration: 600,
+      duration: 0,
       easing: quintOut,
       css: t => `
         transform: ${transform} scale(${t});
@@ -27,6 +29,8 @@ const [send, receive] = crossfade({
 });
 
 export let state;
+let pot;
+
 const defaultState = {
   seats: [],
 	board: [],
@@ -74,6 +78,12 @@ $: {
 
 export function startRound(round) {
   state.board = round.cards
+  state.seats.filter(n=>n).map((seat) => seat.lastAction = null)
+  state.seats.filter(n=>n).map((seat) => {
+    state.pot += seat.committed;
+    seat.committed = 0;
+  })
+
 }
 
 // See https://hh-specs.handhistory.org/action-object/action for a list of possible actions
@@ -109,7 +119,7 @@ export function perform(action) {
     let seat = getSeatByPlayerId(action.player_id)
     
     // If a player faces a $50 bet and raises by $100 to $150, the amount is $150.
-    let oldMaxCommited = state.maxCommitted
+    let oldMaxCommitted = state.maxCommitted
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
     state.seats[seat].lastAction = 'Raise'
@@ -146,7 +156,11 @@ function seatAlignment(index) {
 </script>
 
 <style lang="scss">
-$profileSize: 50px;
+$profileSize: 40px;
+
+@mixin narrow {
+  @media (max-width: 800px) { @content; }
+}
 
 .table {
   background-image: url('/felt.png');
@@ -154,25 +168,35 @@ $profileSize: 50px;
   height: 100%;
   width: 100%;
   // background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.1) 70%,rgba(0,0,0,0.3) 100%);
+  .board {
+    width: $profileSize * 5;
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, 0);
+    .card {
+      width: $profileSize;
+    }
+    .pot {
+      text-align: center;
+      font-size: 20px;
+    }
+    .committed {
+      text-align: center;
+      font-size: 15px;
+    }
+  }
 }
 .seat {
   position: absolute;
   height: 0px;
   width: 0px;
   &.active {
-    .profile_pic {
+    .profile_pic img {
       box-shadow: 0 0 0px 2px yellow;
     }
     .lower_box {
       box-shadow: 0 0 0px 2px yellow;
     }
-  }
-  .dealer {
-    width: $profileSize / 2;
-    position: absolute;
-    z-index: 3;
-    box-shadow: 0 0 4px -2px rgba(0,0,0,0.8);
-    border-radius: 10px;
   }
   .btn.empty_seat {
     position: absolute;
@@ -181,153 +205,208 @@ $profileSize: 50px;
     border-radius: 10px;
     transform: translate(-50%, -50%);
   }
+  
   .cards {
     position: absolute;
     height: $profileSize;
     width: $profileSize * 2;
     bottom: 0;
+    transform: translate(-50%, 0);
     overflow: hidden;
+    z-index: 1;
     .card {
       width: $profileSize;
       position: absolute;
-      &.card_1 {
+      &.card_0 {
         left: 0;
       }
-      &.card_2 {
+      &.card_1 {
         right: 0;
+      }
+    }
+    @include narrow {
+      width: $profileSize * 1.4;
+      height: $profileSize / 1.4;
+      .card {
+        width: $profileSize * 1.4 / 2;
       }
     }
   }
   .lower_box {
     position: absolute;
-    width: 160px;
-    background: rgba(0,0,0,0.4);
-    z-index: 0;
-    height: $profileSize / 2;
-    bottom: - $profileSize / 2;
+    width: $profileSize * 3;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2;
+    height: $profileSize;
+    transform: translate(-50%, 0);
+    border-radius: 10px;
+    text-align: center;
+    @include narrow {
+      width: $profileSize * 2;
+    }
   }
   .committed {
     position: absolute;
     top: 0;
-  }
-  &.right {
-    .committed {
-      right: 170px;
-    }
-    .cards {
-      right: $profileSize / 2 + 10px;
-    }
-    .lower_box {
-      text-align: right;
-      padding-right: $profileSize / 2 + 5px;
-      right: 0;
-      border-top-left-radius: 100px;
-      border-bottom-left-radius: 100px;
-    }
-  }
-  &.left {
-    .committed {
-      left: 170px;
-    }
-    .cards {
-      left: $profileSize / 2 + 10px;
-    }
-    .lower_box {
-      text-align: left;
-      padding-left: $profileSize / 2 + 5px;
-      left: 0;
-      border-bottom-right-radius: 100px;
-      border-top-right-radius: 100px;
+    white-space: nowrap;
+    .chips {
+      position: relative;
+      width: $profileSize / 1.6;
     }
   }
   .profile_pic {
-    z-index: 1;
-    width: 50px;
-    height: 50px;
-    top: 0;
-    left: 0;
+    z-index: 5;
+    width: $profileSize;
+    height: $profileSize;
     position: absolute;
-    transform: translate(-50%, -50%);
-    border-radius: 100px;
-    vertical-align: middle;
-    box-shadow: -1px 1px 2px rgba(0,0,0,0.5);
+    // transform: translate(-50%, -50%);
+    @include narrow {
+      z-index: 0;
+      width: $profileSize * 2;
+      height: $profileSize * 2;
+      transform: translate(-50%, 0);
+      bottom: -$profileSize / 2;
+    }
+    .pic {
+      box-shadow: -1px 1px 2px rgba(0,0,0,0.5);
+      border-radius: 100px;
+      width: 100%;
+      height: 100%;
+    }
+  }
+  .dealer {
+    width: $profileSize / 1.5;
+    position: absolute;
+    z-index: 3;
+    box-shadow: 0 0 4px -2px rgba(0,0,0,0.8);
+    border-radius: 10px;
+    top: $profileSize / 1.5;
+  }
+  .last_action {
+    position: absolute;
+    white-space: nowrap;
+    bottom: -$profileSize;
+  }
+  &.right {
+    .dealer {
+      right: -$profileSize * 1.5;
+    }
+    .profile_pic {
+      left: $profileSize;
+      @include narrow {
+        left: initial;
+      }
+    }
+    .committed, .last_action {
+      right: $profileSize * 1.5 + 10px;
+      text-align: right;
+      @include narrow {
+        right: $profileSize * 1 + 5px;
+      }
+    }
+    
+  }
+  &.left {
+    .dealer {
+      left: -$profileSize * 1.5;
+    }
+    .profile_pic {
+      right: $profileSize;
+      @include narrow {
+        right: initial;
+      }
+    }
+    .committed, .last_action {
+      left: $profileSize * 1.5 + 10px;
+      @include narrow {
+        left: $profileSize * 1 + 5px;
+      }
+    }
   }
   &.seat_0 {
-    left: $profileSize / 2 + 20px;
+    left: calc(#{$profileSize} / 2 + 10%);
     top: calc(0px + 120px);
   }
   &.seat_1 {
-    right: $profileSize / 2 + 20px;
+    right: calc(#{$profileSize} / 2 + 10%);
     top: calc(0px + 120px);
   }
   &.seat_2 {
-    right: $profileSize / 2 + 20px;
+    right: calc(#{$profileSize} / 2 + 10%);
     top: calc(120px + 120px);
   }
   &.seat_3 {
-    right: $profileSize / 2 + 20px;
+    right: calc(#{$profileSize} / 2 + 10%);
     top: calc(240px + 120px);
   }
   &.seat_4 {
-    left: $profileSize / 2 + 20px;
+    left: calc(#{$profileSize} / 2 + 10%);
     top: calc(240px + 120px);
   }
   &.seat_5 {
-    left: $profileSize / 2 + 20px;
+    left: calc(#{$profileSize} / 2 + 10%);
     top: calc(120px + 120px);
   }
 }
 </style>
 
 <div class="table">
-  Board: {state.board}<br>
-  Committed: {totalCommitted}<br>
-  Pot: {state.pot}
-
   <div class="board">
     {#each state.board as boardCard}
-      <img in:fly="{{ y: -25, duration: duration(450) }}" src="/cards/{boardCard.toLowerCase()}.png" alt={boardCard}>
+      <img class="card" in:fly="{{ y: -25, duration: duration(450) }}" src="/cards/{boardCard.toLowerCase()}.png" alt={boardCard}>
     {/each}
+    <div bind:this={pot} class="pot">
+      Pot: {state.pot}
+    </div>
+    <div class="committed">
+      {totalCommitted}
+    </div>
   </div>
   <div class="pot">
   
   </div>
   {#each Array(state.seats.length) as _, index}
     <div class="seat {seatAlignment(index)} seat_{index}" class:active={state.activeSeatIndex == index}>
-      {#if state.dealerSeat == index}
-        <img class="dealer" in:receive={'dealer'} out:send={'dealer'} src="/button.png" alt="DEALER">
-      {/if}
       {#if state.seats[index]}
-        {#await player.fetch(state.seats[index].player_id)}
-          Loading Player {state.seats[index].player_id}...
-        {:then player}
+        {#if state.dealerSeat == index}
+          <img class="dealer" in:receive={'dealer'} out:send={'dealer'} src="/button.png" alt="DEALER">
+        {/if}
+        <!-- TODO: this is calling player.fetch a lot of times... why? -->
+        {#await player.fetch(state.seats[index].player_id) then player}
           {#if state.seats[index].cards}
             <div class="cards">
-              {#each state.seats[index].cards as card}
+              {#each state.seats[index].cards as card, index}
                 {#if card == '?'}
-                  <img class="card" alt="?" src="/cards/back.png">
+                  <img class="card card_{index}" alt="?" src="/cards/back.png">
                 {/if}
               {/each}
             </div>
           {/if}
-          <img src={player.profile_pic} alt={player.nick} class="profile_pic">
+          <div class="profile_pic">
+            <img src={player.profile_pic} alt={player.nick} class="pic">
+          </div>
           <div class="lower_box">
             <div class="name">
               {player.nick}
-            </div>
-            <div class="last_action">
-              {state.seats[index].lastAction || ''}
             </div>
             <div class="stack">
               {state.seats[index].stack}
             </div>
           </div>
-          <div class="committed">
-            {state.seats[index].committed}
-          </div>
         {:catch}
           Error loading player...
         {/await}
+        
+        <div class="last_action">
+          {state.seats[index].lastAction || ''}<br>
+        </div>
+        <div class="committed">
+          {#if state.seats[index].committed > 0}
+            <div out:vortex|local={{target: pot, duration: duration(1000)}} class="chips">
+              <Stack amount={state.seats[index].committed}></Stack>
+            </div>
+          {/if}
+        </div>
         {#if !state.seats[index].sitting_in}
           <br>Sitting Out
         {/if}

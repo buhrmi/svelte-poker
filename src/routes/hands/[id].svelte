@@ -114,11 +114,20 @@ export async function preload(page, session) {
 </script>
 
 <style lang="scss">
+@mixin narrow {
+  @media (max-width: 800px) { @content; }
+}
 .main_area {
   position: fixed;
   height: 100vh;
   width: 70vw;
   left: 30vw;
+  @include narrow {
+    
+    width: 100vw;
+    left: 0;
+    
+  }
 }
 .history {
   position: fixed;
@@ -127,6 +136,9 @@ export async function preload(page, session) {
   left: 0;
   background-image: url('/wood.png');
   color: white;
+  @include narrow {
+    display: none;
+  }
   .action {
     padding: 2px;
     padding-left: 16px;
@@ -145,6 +157,12 @@ export async function preload(page, session) {
 .panel {
   position: absolute;
   bottom: 0;
+  width: 100%;
+  text-align: center;
+  .btn {
+    width: 40%;
+    height: 100px;
+  }
 }
 
 </style>
@@ -167,11 +185,11 @@ export async function preload(page, session) {
   <Table bind:state={tableState} bind:this={table}></Table>
   
   <div class="panel">
-    <button class="btn" on:click={performToPreviousAction}>&lt; Rewind</button>
-    <button class="btn" on:click={performNextAction}>Next &gt;</button> (Round: {currentRound.street}, Action: {$historyPosition.action})
+    <button class="btn" on:click={performToPreviousAction}>&lt; Back</button>
+    <button class="btn" on:click={performNextAction}>Next &gt;</button>
     <div class="debug">
-      Player: {$player.nick}<br>
-      state: {JSON.stringify(tableState)}
+      <!-- Player: {$player.nick}<br> -->
+      <!-- state: {JSON.stringify(tableState)} -->
     </div>
   </div>
 </div>
