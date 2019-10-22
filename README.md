@@ -1,10 +1,8 @@
 # Svelte Poker 
 
-With Svelte Poker, you can:
-
-- View and Replay [Standardized Hand Histories](https://hh-specs.handhistory.org)
-- Play real Poker for Bitcoin
-- Travel the world
+- Play Poker for Bitcoin
+- Analyze and export [Standardized Hand Histories](https://hh-specs.handhistory.org)
+- Chat with other players
 
 ## Progress
 
