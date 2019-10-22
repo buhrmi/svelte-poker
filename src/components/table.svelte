@@ -75,6 +75,13 @@ $: {
   state.seats.filter(s=>s).map(s => result += s.committed);
   totalCommitted = result
 }
+$: {
+  state.maxCommitment = 0
+  for (let i = 0; i < state.seats.filter(s=>s).length; i++) {
+    const seat = state.seats.filter(s=>s)[i];
+    if (seat.committed > state.maxCommitment) state.maxCommitment = seat.committed
+  }
+}
 
 export function startRound(round) {
   state.board = round.cards
@@ -83,7 +90,7 @@ export function startRound(round) {
     state.pot += seat.committed;
     seat.committed = 0;
   })
-
+  state.minRaiseTo = state.big_blind_amount
 }
 
 // See https://hh-specs.handhistory.org/action-object/action for a list of possible actions
@@ -98,7 +105,6 @@ export function perform(action) {
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
     state.seats[seat].lastAction = 'Posted SB'
-    state.maxCommitted = state.seats[seat].committed
   }
 
   if (action.action == 'Post BB') {
@@ -106,7 +112,7 @@ export function perform(action) {
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
     state.seats[seat].lastAction = 'Posted BB'
-    state.maxCommitted = state.seats[seat].committed
+    state.minRaiseTo = 2 * action.amount
   }
 
   if (action.action == 'Fold') {
@@ -119,12 +125,11 @@ export function perform(action) {
     let seat = getSeatByPlayerId(action.player_id)
     
     // If a player faces a $50 bet and raises by $100 to $150, the amount is $150.
-    let oldMaxCommitted = state.maxCommitted
+    let oldMinRaiseTo = state.minRaiseTo
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
     state.seats[seat].lastAction = 'Raise'
-    state.maxCommitted = state.seats[seat].committed
-    state.minRaise = state.maxCommitted - oldMaxCommitted
+    state.minRaiseTo = 2 * state.seats[seat].committed - state.minRaiseTo
   }
 
   if (action.action == 'Check') {
@@ -136,7 +141,6 @@ export function perform(action) {
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
     state.seats[seat].lastAction = 'Called'
-    state.maxCommitted = state.seats[seat].committed
   }
 
   if (action.action == 'Bet') {
@@ -144,8 +148,7 @@ export function perform(action) {
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
     state.seats[seat].lastAction = 'Bet'
-    state.maxCommitted = state.seats[seat].committed
-    state.minRaise = action.amount
+    state.minRaiseTo = 2 * action.amount
   }
 
 }

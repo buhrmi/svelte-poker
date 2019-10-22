@@ -20,7 +20,6 @@ export async function preload(page, session) {
 
   export let history;
   let table;
-  
 
   // Build initial table state from hand history object
   let tableState = {seats: Array(history.table_size)}

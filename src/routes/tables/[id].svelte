@@ -20,10 +20,10 @@ export async function preload(page, session) {
   let { session, page } = stores();
 
   export let tableData;
-  let tableState = {seats: Array(tableData.settings.table_size)};
+  let tableState = {settings: tableData.settings, seats: Array(tableData.settings.table_size)};
   let table;
   let history = {rounds: []};
-  let hands = []
+  let hands = [{history}]
 
   let currentRoundIndex = 0;
   let currentActionIndex = 0;
@@ -104,8 +104,8 @@ export async function preload(page, session) {
 
     if (message.type == 'betting-round-ended') {
       tableState.activeSeatIndex = null
-      tableState.seats.map((s) => s.lastAction = null)
-      tableState.seats.map((seat) => seat.committed = 0)
+      tableState.seats.filter(n=>n).map((s) => s.lastAction = null)
+      tableState.seats.filter(n=>n).map((seat) => seat.committed = 0)
     }
 
     if (message.type == 'action-is-on') {
@@ -147,9 +147,11 @@ export async function preload(page, session) {
     }
 
     // It's partial hand history
-    if (message.rounds) {
+    if (message.type == 'history') {
+      // got partial history
       history = message
       table.reset(buildTableStateFromHistory(history));
+      // TODO: replay hand
     }
   }
 
@@ -291,7 +293,7 @@ export async function preload(page, session) {
 <div class="history">
   {#each hands as hand, handIndex}
     <div class="hand">
-      <div class="action">--- HAND STARTED ---</div>
+      <div class="action">--- NEW HAND ---</div>
       {#each hand.history.rounds as round, roundIndex}
         <div class="round">
           <div on:click={() => {performTo(roundIndex, -1)}} class="action" class:active={currentRoundIndex == roundIndex && currentActionIndex == -1}>*** {round.street == 'preflop' ? 'HOLE CARDS' : round.street.toUpperCase()} ***</div>
@@ -305,7 +307,7 @@ export async function preload(page, session) {
       {/each}
       {#if hand.id}
         <div class="action">
-          --- HAND #{hand.id} ENDED (<a href="/hands/{hand.id}" target="_blank">REVIEW</a>)---
+          <a href="/hands/{hand.id}" target="_blank">REVIEW HAND</a>
         </div>
       {/if}
     </div>
@@ -330,16 +332,16 @@ export async function preload(page, session) {
     {:else}
       {#if playerIndex}
         <div class="btn {isPlayersTurn ? '' : 'disabled'} fold" on:click={() => fold()}>Fold</div>
-        {#if tableState.seats[playerIndex] && tableState.bet == tableState.seats[playerIndex].bet}
+        {#if tableState.seats[playerIndex] && tableState.maxCommitment == tableState.seats[playerIndex].committed}
           <div class="btn {isPlayersTurn ? '' : 'disabled'} check" on:click={() => check()}>Check</div>
         {:else}
-          <div class="btn {isPlayersTurn ? '' : 'disabled'} call" on:click={() => call()}>Call {tableState.bet - tableState.seats[playerIndex].bet}</div>
+          <div class="btn {isPlayersTurn ? '' : 'disabled'} call" on:click={() => call()}>Call {tableState.maxCommitment - tableState.seats[playerIndex].committed}</div>
         {/if}
         
-        {#if tableState.bet == 0}
-          <div class="btn {isPlayersTurn ? '' : 'disabled'} bet" on:click={() => bet(tableState.minRaise)}>Bet {tableState.minRaise} {#if tableState.seats[playerIndex] && tableState.minRaise == tableState.seats[playerIndex].stack}(All-In){/if}</div>
+        {#if tableState.maxCommitment == 0}
+          <div class="btn {isPlayersTurn ? '' : 'disabled'} bet" on:click={() => bet(tableState.minRaiseTo)}>Bet {tableState.minRaiseTo} {#if tableState.seats[playerIndex] && tableState.minRaiseTo == tableState.seats[playerIndex].stack}(All-In){/if}</div>
         {:else}
-          <div class="btn {isPlayersTurn ? '' : 'disabled'} raise" on:click={() => raise(tableState.minRaise)}>Raise {tableState.minRaise}</div>
+          <div class="btn {isPlayersTurn ? '' : 'disabled'} raise" on:click={() => raise(tableState.minRaiseTo)}>Raise to {tableState.minRaiseTo}</div>
         {/if}
       {/if}
     {/if}
