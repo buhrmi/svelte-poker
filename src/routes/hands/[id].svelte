@@ -25,6 +25,7 @@ export async function preload(page, session) {
   let tableState = {seats: Array(history.table_size)}
   for (const player of history.players) {
     player.stack = player.starting_stack;
+    player.chips = []
     player.committed = 0;
     player.player_id = player.id
     player.sitting_in = true

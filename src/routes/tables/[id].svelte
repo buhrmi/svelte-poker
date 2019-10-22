@@ -122,7 +122,7 @@ export async function preload(page, session) {
     }
 
     if (message.type == 'sit-down') {
-      tableState.seats[message.seat] = {player_id: message.player_id, committed: 0, stack: 0}
+      tableState.seats[message.seat] = {player_id: message.player_id, committed: 0, stack: 0, chips: []}
     }
 
     if (message.type == 'stand-up') {

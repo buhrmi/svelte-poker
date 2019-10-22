@@ -1,36 +1,54 @@
 <script>
-  export let amount = 0;
+  import { fly } from 'svelte/transition';
+  import { onMount } from 'svelte';
 
-  let chips = []
+  export let seat;
+  if (!seat.chips || seat.committed == 0) seat.chips = [];
+  
+  let alreadyExisted = 0
   let denominations = [100000, 50000, 10000, 5000, 1000, 500, 100, 50, 10]
+  let displayedCommited = 0
 
+  onMount(function() {
+    setInterval(function() {
+      if (displayedCommited < seat.committed) {
+        displayedCommited += Math.round(seat.committed / 20)
+      }
+      if (displayedCommited > seat.committed) displayedCommited = seat.committed
+    }, 10)
+  })
   $: {
-    let remaining = amount
-    chips = []
+    let remaining = seat.committed
+    alreadyExisted = seat.chips.length
+    for (let i = 0; i < seat.chips.length; i++) {
+      remaining -= seat.chips[i]
+    }
     denominations.forEach(denomination => {
       let numChipsToAdd = Math.floor(remaining / denomination)
       for (let index = 0; index < numChipsToAdd; index++) {
-        chips.push(denomination);
+        seat.chips.push(denomination);
       }
       remaining = remaining % denomination
     });
-    chips = chips
-    // chips = chips.reverse()
+    seat.chips = seat.chips
+    
   }
 </script>
 
 <style lang="scss">
+.amount {
+  position: relative;
+  transition: all 0.5s;
+}
 .stack {
   width: 100%;
   position: absolute;
   bottom: 0;
   .chip {
     width: 100%;
-    position: relative;
-    margin-bottom: -90%;
+    position: absolute;
     img {
       position: relative;
-      display: block;
       width: 100%;
     }
   }
@@ -39,10 +57,14 @@
 </style>
 
 <div class="stack" >
-  {amount}
-  {#each chips as chip, n}
+  {#each seat.chips.reverse() as chip, n}
     <div class="chip">
-      <img src="/chips/{chip}.png" alt={chip} style="z-index: {50-n}"/>
+      <img in:fly={{ y: -15, delay: (n - alreadyExisted) * 200 }} src="/chips/{chip}.png" alt={chip} style="z-index: {n};top: -{n * 4}px"/>
     </div>
   {/each}
+  {#if displayedCommited}
+    <div class="amount" style="top: -{seat.chips.length * 4 + 20}px">
+      {displayedCommited}
+    </div>
+  {/if}
 </div>

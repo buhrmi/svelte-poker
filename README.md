@@ -1,11 +1,19 @@
 # Svelte Poker 
 
-This is a [Standardized Hand Histories](https://hh-specs.handhistory.org) player.
+With Svelte Poker, you can:
 
-Currently it loads a Hand History from a URL, sets an initial table state, and iterates over [action objects](https://hh-specs.handhistory.org/action-object/action_obj) contained in the history. Each action mutates the table state, which triggers [Svelte transitions and effects](https://svelte.dev/tutorial/transition).
-
+- View and Replay [Standardized Hand Histories](https://hh-specs.handhistory.org)
+- Play real Poker for Bitcoin
+- Travel the world
 
 ## Progress
+
+2019-10-23
+
+- Tweaks for small devices
+- Chip animations
+
+![](https://i.imgur.com/jPaUf8l.gif)
 
 2019-10-22
 
