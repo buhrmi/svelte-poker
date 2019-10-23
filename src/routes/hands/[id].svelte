@@ -28,6 +28,7 @@ export async function preload(page, session) {
     player.stack = player.starting_stack;
     player.chips = []
     player.cards = []
+    player.currentChatMessage = 'shitcoins looool buy some love. free handjobs'
     player.committed = 0;
     player.player_id = player.id
     player.sitting_in = true

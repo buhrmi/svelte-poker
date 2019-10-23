@@ -1,9 +1,6 @@
 # Svelte Poker 
 
-- Play Poker for Bitcoin
-- Analyze and export [Standardized Hand Histories](https://hh-specs.handhistory.org)
-- Chat with other players
-- Integrate your own ~shitcoin~ altcoin
+A poker game written in [Svelte](https://svelte.dev).
 
 ## Progress
 

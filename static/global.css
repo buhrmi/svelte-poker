@@ -21,6 +21,87 @@ a {
 }
 
 
+.left p.bubble {
+	top: -60px;
+	left: 35px;
+}
+
+.right p.bubble {
+	top: -60px;
+	right: 35px;
+}
+
+.left p.bubble:before,
+.left p.bubble:after {
+	content: ' ';
+	position: absolute;
+	width: 0;
+	height: 0;
+}
+
+.left p.speech:before {
+	left: -16px;
+	bottom: 7px;
+	border: 8px solid;
+	border-color: transparent #333 #333 transparent;
+}
+
+.left p.speech:after {
+	left: -10px;
+	bottom: 10px;
+	border: 5px solid;
+	border-color: transparent #fff #fff transparent;
+}
+
+.right p.bubble:before,
+.right p.bubble:after {
+	content: ' ';
+	position: absolute;
+	width: 0;
+	height: 0;
+}
+
+.right p.speech:before {
+	right: -16px;
+	bottom: 7px;
+	border: 8px solid;
+	border-color: transparent transparent #333  #333;
+}
+
+.right p.speech:after {
+	right: -10px;
+	bottom: 10px;
+	border: 5px solid;
+	border-color: transparent transparent #fff #fff;
+}
+
+.middle p.speech {
+	top: -100px;
+	left: -140px;
+}
+
+.middle p.bubble:before,
+.middle p.bubble:after {
+	content: ' ';
+	position: absolute;
+	width: 0;
+	height: 0;
+}
+
+.middle p.speech:before {
+	left: 51px;
+	bottom: -16px;
+	border: 8px solid;
+	border-color: #333 transparent transparent #333;
+}
+
+.middle p.speech:after {
+	left: 53px;
+	bottom: -10px;
+	border: 5px solid;
+	border-color: #fff transparent transparent #fff;
+}
+
 p.bubble {
 	position: absolute;
 	width: 160px;
@@ -44,27 +125,7 @@ p.thought {
 	padding: 30px;	
 }
 
-p.bubble:before,
-p.bubble:after {
-	content: ' ';
-	position: absolute;
-	width: 0;
-	height: 0;
-}
 
-p.speech:before {
-	left: 51px;
-	bottom: -16px;
-	border: 8px solid;
-	border-color: #333 transparent transparent #333;
-}
-
-p.speech:after {
-	left: 53px;
-	bottom: -10px;
-	border: 5px solid;
-	border-color: #fff transparent transparent #fff;
-}
 
 p.thought:before,
 p.thought:after {

@@ -57,7 +57,7 @@ function deal(node, {rotate = 0, card, seat, duration}) {
 }
 
 export let state;
-export let heroIndex = 0;
+export let heroIndex = 1;
 let pot;
 let seatElements = [];
 let playerSize = 36;
@@ -116,7 +116,7 @@ $: {
 }
 
 export function startRound(round) {
-  state.board = round.cards
+  if (round.cards && round.cards.length > 0) state.board = round.cards
   state.seats.filter(n=>n).map((seat) => seat.lastAction = null)
   state.seats.filter(n=>n).map((seat) => {
     state.pot += seat.committed;
@@ -315,8 +315,8 @@ function seatCSS(index) {
   .cards {
     position: absolute;
     height: var(--playerSize);
-    width: calc(var(--playerSize) * 1.8);
-    bottom: 0;
+    width: calc(var(--playerSize) * 1.65);
+    bottom: -6px;
     transform: translate(-50%, 0);
     // overflow: hidden;
     z-index: 1;
@@ -329,14 +329,14 @@ function seatCSS(index) {
         transform: rotate(-5deg) rotateY(180deg);
         left: 0;
         &.turned {
-          transform: rotate(-5deg);
+          transform: rotateZ(0) translate(0px, -10px) scale(1.3);
         }
       }
       &.card_1 {
         transform: rotate(12deg) rotateY(180deg);
         right: 0;
         &.turned {
-          transform: rotate(12deg);
+          transform: rotateZ(0) translate(0px, -10px) scale(1.3);
         }
       }
     }
@@ -434,6 +434,16 @@ function seatCSS(index) {
           z-index: 10;
           box-shadow: 0 0 0px 3px #d612dd;
         }
+        &.card_0 {
+          &.turned {
+            transform: rotateZ(0) translate(-20px, -100px);
+          }
+        }
+        &.card_1 {
+          &.turned {
+            transform: rotateZ(0) translate(20px, -100px);
+          }
+        }
       }
     }
     .profile_pic {
@@ -476,13 +486,16 @@ function seatCSS(index) {
   {#each Array(state.seats.length) as _, index}
     <div class="seat {seatClass(index, heroIndex)}" style={seatCSS(index, heroIndex)} class:active={state.activeSeatIndex == index} bind:this={seatElements[index]}>
       {#if state.seats[index]}
+        {#if state.seats[index].currentChatMessage}
+          <p in:fade="{{ duration: 100 }}" out:fly="{{ y: -8, duration: 650 }}" class="bubble speech">{state.seats[index].currentChatMessage}</p>
+        {/if}
         {#if state.dealerSeat == index}
           <img class="dealer" in:receive={'dealer'} out:send={'dealer'} src="/button.png" alt="DEALER">
         {/if}
         <!-- TODO: this is calling player.fetch a lot of times... why? -->
         <div class="cards">
           {#each state.seats[index].cards as card, cardIndex}
-            <img class="card card_{cardIndex}" class:calledout={state.calledOutCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, x: cardIndex == 0 ? 20 : - 20, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(600)}}>  
+            <img class="card card_{cardIndex}" class:calledout={state.calledOutCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, x: cardIndex == 0 ? -20 : 20, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(600)}}>  
           {/each}
         </div>
       
