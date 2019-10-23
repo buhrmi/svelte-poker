@@ -26,6 +26,7 @@ export async function preload(page, session) {
   for (const player of history.players) {
     player.stack = player.starting_stack;
     player.chips = []
+    player.cards = []
     player.committed = 0;
     player.player_id = player.id
     player.sitting_in = true
@@ -66,6 +67,17 @@ export async function preload(page, session) {
     if (table) {
       if (nextAction) tableState.activeSeatIndex = table.getSeatByPlayerId(nextAction.player_id)
       else tableState.activeSeatIndex = null
+    }
+  }
+  
+  let playerIndex;
+  $: {
+    playerIndex = null
+    if ($player) {
+      for (let index = 0; index < tableState.seats.length; index++) {
+        const seat = tableState.seats[index];
+        if (seat && seat.player_id == $player.id) playerIndex = index
+      }
     }
   }
 
@@ -159,9 +171,10 @@ export async function preload(page, session) {
   bottom: 0;
   width: 100%;
   text-align: center;
+  height: 10%;
   .btn {
     width: 40%;
-    height: 100px;
+    height: 100%;
   }
 }
 
@@ -182,7 +195,7 @@ export async function preload(page, session) {
 </div>
 
 <div class="main_area">
-  <Table bind:state={tableState} bind:this={table}></Table>
+  <Table bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table}></Table>
   
   <div class="panel">
     <button class="btn" on:click={performToPreviousAction}>&lt; Back</button>

@@ -7,6 +7,7 @@ import { quintOut, cubicOut } from 'svelte/easing';
 import { createEventDispatcher } from 'svelte';
 import { vortex } from '@/transitions'
 import Stack from './stack.svelte'
+import { onMount } from 'svelte';
 
 const dispatch = createEventDispatcher();
 
@@ -37,14 +38,13 @@ function deal(node, {rotate = 0, card, seat, duration}) {
   const fromY = fromRect.top + fromRect.height / 2 - targetRect.height / 2;
   const deltaX = fromX - targetRect.left;
   const deltaY = fromY - targetRect.top;
-
   const delay = 180 * card;
-
   const transition = {
     delay: zeroIfAnimationsDisabled(delay),
     duration,
     easing: quintOut,
     css: t => {
+      if (!animations) t = 1 // workaround for svelte applying animations even duration is 0 (i think it's caching the transition object)
       return `
         transform: translate(${deltaX*(1-t)}px, ${deltaY*(1-t)}px) rotate(${rotate * Math.pow(t, 80)}deg) scale(${0.8 + (t / 5)});
         z-index: ${t < 0.7 ? 10000-delay : 3};
@@ -55,6 +55,7 @@ function deal(node, {rotate = 0, card, seat, duration}) {
 }
 
 export let state;
+export let heroIndex = 0;
 let pot;
 let seatElements = [];
 
@@ -181,9 +182,42 @@ export function perform(action) {
 
 }
 
-function seatAlignment(index) {
-  return [1,2,3].indexOf(index) == -1 ? 'left' : 'right'
+function seatClass(index) {
+  // We rotate the seat so that "heroIndex" always is in the bottom center
+  index = (state.seats.length + index - heroIndex) % state.seats.length
+  if (index === 0) return 'middle'
+  return [1,2,3].indexOf(index) == -1 ? 'right' : 'left'
 }
+
+function seatCSS(index) {
+  // We rotate the seat so that "heroIndex" always is in the bottom center
+
+  index = (state.seats.length + index - heroIndex) % state.seats.length
+  let profileSize = '40px';
+  let panelHeight = '20%';
+  if (index == 0) {
+    return `left: calc(50% - (${profileSize} / 2));top: calc(100% - ${panelHeight});`
+  }
+  else if (index == 1) {
+    return `left: calc(${profileSize} / 2 + 10%);top: calc(240px + 120px);`
+  }
+  else if (index == 2) {
+    return `left: calc(${profileSize} / 2 + 10%);top: calc(120px + 120px);`
+  }
+  else if (index == 3) {
+    return `left: calc(${profileSize} / 2 + 10%);top: calc(0px + 120px);`
+  }
+  else if (index == 4) {
+    return `left: calc(100% - (${profileSize} / 2 + 10%));top: calc(0px + 120px);`
+  }
+  else if (index == 5) {
+    return `left: calc(100% - (${profileSize} / 2 + 10%));top: calc(120px + 120px);`
+  }
+  else if (index == 6) {
+    return `left: calc(100% - (${profileSize} / 2 + 10%));top: calc(240px + 120px);`
+  }
+}
+
 </script>
 
 <style lang="scss">
@@ -200,15 +234,15 @@ $profileSize: 40px;
   width: 100%;
   // background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.1) 70%,rgba(0,0,0,0.3) 100%);
   .board {
-    width: $profileSize * 5;
+    width: 40%;
     position: absolute;
     left: 50%;
     top: 200px;
     transform: translate(-50%, 0);
     .cards {
-      height: $profileSize * 1.4;
+      // height: $profileSize * 1.4;
       .card {
-        width: $profileSize;
+        width: calc(20%);
       }
     }
     .pot {
@@ -225,6 +259,7 @@ $profileSize: 40px;
   position: absolute;
   height: 0px;
   width: 0px;
+  transition: all 0.5s;
   &.active {
     .profile_pic img {
       box-shadow: 0 0 0px 2px yellow;
@@ -344,7 +379,7 @@ $profileSize: 40px;
     }
     
   }
-  &.left {
+  &.left, &.middle {
     .dealer {
       left: -$profileSize * 1.5;
     }
@@ -354,6 +389,8 @@ $profileSize: 40px;
         right: initial;
       }
     }
+  }
+  &.left {
     .committed, .last_action {
       left: $profileSize * 1.5 + 10px;
       @include narrow {
@@ -361,30 +398,17 @@ $profileSize: 40px;
       }
     }
   }
-  &.seat_0 {
-    left: calc(#{$profileSize} / 2 + 10%);
-    top: calc(0px + 120px);
+  &.middle {
+    .committed, .last_action {
+      top: -$profileSize * 2 + 10px;
+      text-align: center;
+      @include narrow {
+        top: -$profileSize * 2.2 + 5px;
+        left: -$profileSize / 4;
+      }
+    }
   }
-  &.seat_1 {
-    right: calc(#{$profileSize} / 2 + 10%);
-    top: calc(0px + 120px);
-  }
-  &.seat_2 {
-    right: calc(#{$profileSize} / 2 + 10%);
-    top: calc(120px + 120px);
-  }
-  &.seat_3 {
-    right: calc(#{$profileSize} / 2 + 10%);
-    top: calc(240px + 120px);
-  }
-  &.seat_4 {
-    left: calc(#{$profileSize} / 2 + 10%);
-    top: calc(240px + 120px);
-  }
-  &.seat_5 {
-    left: calc(#{$profileSize} / 2 + 10%);
-    top: calc(120px + 120px);
-  }
+  
 }
 </style>
 
@@ -406,21 +430,18 @@ $profileSize: 40px;
   
   </div>
   {#each Array(state.seats.length) as _, index}
-    <div class="seat {seatAlignment(index)} seat_{index}" class:active={state.activeSeatIndex == index} bind:this={seatElements[index]}>
+    <div class="seat {seatClass(index, heroIndex)}" style={seatCSS(index, heroIndex)} class:active={state.activeSeatIndex == index} bind:this={seatElements[index]}>
       {#if state.seats[index]}
         {#if state.dealerSeat == index}
           <img class="dealer" in:receive={'dealer'} out:send={'dealer'} src="/button.png" alt="DEALER">
         {/if}
         <!-- TODO: this is calling player.fetch a lot of times... why? -->
-        {#if state.seats[index].cards}
-          <div class="cards">
-            {#each state.seats[index].cards as card, cardIndex}
-              {#if card == '?'}
-                <img class="card card_{cardIndex}" alt="?" src="/cards/back.png" out:fly={{y: -60, x: cardIndex == 0 ? 20 : - 20, duration: zeroIfAnimationsDisabled(600)}} in:deal={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(600)}}>
-              {/if}
-            {/each}
-          </div>
-        {/if}
+        <div class="cards">
+          {#each state.seats[index].cards as card, cardIndex}
+            <img class="card card_{cardIndex}" alt="?" src="/cards/back.png" out:fly={{y: -60, x: cardIndex == 0 ? 20 : - 20, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(600)}}>  
+          {/each}
+        </div>
+      
         {#await player.fetch(state.seats[index].player_id) then player}
           <div class="profile_pic">
             <img src={player.profile_pic} alt={player.nick} class="pic">

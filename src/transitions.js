@@ -17,7 +17,7 @@ function vortex(node, {target, duration = 1000}) {
   const prevY = parseInt(style.top) || 0;
   const deltaX = targetX - sourceX
   const deltaY = targetY - sourceY
-  console.log('VORTEXING')
+  // console.log('VORTEXING', duration)
   return {
     duration,
     easing: cubicOut,

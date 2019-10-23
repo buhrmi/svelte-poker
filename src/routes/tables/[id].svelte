@@ -27,25 +27,6 @@ export async function preload(page, session) {
 
   let currentRoundIndex = 0;
   let currentActionIndex = 0;
-  let nextAction;
-  $: {
-    if (history.rounds[currentRoundIndex]) { // if a round exists.
-      if (currentRoundIndex == history.rounds.length-1 && currentActionIndex == history.rounds[history.rounds.length - 1].actions.length -1) {
-        nextAction = null
-      }
-      else if (currentActionIndex == history.rounds[currentRoundIndex].actions.length-1) {
-        nextAction == history.rounds[currentRoundIndex + 1].actions[0]
-      }
-      else {
-        nextAction = history.rounds[currentRoundIndex].actions[currentActionIndex + 1]
-      }
-    }
-  }
-  $: {
-    if (nextAction) tableState.activeSeatIndex = table.getSeatByPlayerId(nextAction.player_id)
-    else tableState.activeSeatIndex = null
-  }
-
   let playerIndex;
   $: {
     playerIndex = null
@@ -315,7 +296,7 @@ export async function preload(page, session) {
 </div>
 
 <div class="main_area">
-  <Table bind:state={tableState} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
+  <Table bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
 
   <div class="panel">
     {#if playerIndex}
