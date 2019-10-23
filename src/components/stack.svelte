@@ -1,13 +1,22 @@
 <script>
   import { fly } from 'svelte/transition';
   import { onMount } from 'svelte';
-
+  export let seatClass;
   export let seat;
   if (!seat.chips || seat.committed == 0) seat.chips = [];
   
   let alreadyExisted = 0
   let denominations = [100000, 50000, 10000, 5000, 1000, 500, 100, 50, 10]
   let displayedCommited = 0
+  function flyFrom(index) {
+    if (seatClass == 'left') {
+      return {x: -30}
+    }
+    else if (seatClass == 'right') {
+      return {x: 30}
+    }
+    return {y: 20, x: -20}
+  }
 
   onMount(function() {
     setInterval(function() {
@@ -44,6 +53,7 @@
   width: 100%;
   position: absolute;
   bottom: 0;
+  z-index: 10;
   .chip {
     width: 100%;
     position: absolute;
@@ -59,7 +69,7 @@
 <div class="stack" >
   {#each seat.chips.reverse() as chip, n}
     <div class="chip">
-      <img in:fly={{ y: -15, delay: (n - alreadyExisted) * 200 }} src="/chips/{chip}.png" alt={chip} style="z-index: {n};top: -{n * 4}px"/>
+      <img in:fly={{ ...flyFrom(), delay: (n - alreadyExisted) * 170, duration: 400 }} src="/chips/{chip}.png" alt={chip} style="z-index: {n};top: -{n * 4}px"/>
     </div>
   {/each}
   {#if displayedCommited}

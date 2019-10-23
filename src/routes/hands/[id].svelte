@@ -17,6 +17,7 @@ export async function preload(page, session) {
   import { writable } from 'svelte/store'
   import player from '../../stores/player';
   import Table from '../../components/table.svelte';
+  import CardString from '../../components/card_string.svelte'
 
   export let history;
   let table;
@@ -151,6 +152,9 @@ export async function preload(page, session) {
   @include narrow {
     display: none;
   }
+  .pots {
+    padding-left: 16px;
+  }
   .action {
     padding: 2px;
     padding-left: 16px;
@@ -167,6 +171,8 @@ export async function preload(page, session) {
   }
 }
 .panel {
+  z-index: 10;
+  background: url('/wood.png');
   position: absolute;
   bottom: 0;
   width: 100%;
@@ -183,19 +189,29 @@ export async function preload(page, session) {
 <div class="history">
   {#each history.rounds as round, roundIndex}
     <div class="round">
-      <div on:click={() => {performTo(roundIndex, -1)}} class="action" class:active={$historyPosition.round == roundIndex && $historyPosition.action == -1}>*** {round.street == 'preflop' ? 'HOLE CARDS' : round.street.toUpperCase()} ***</div>
+      <div on:click={() => {performTo(roundIndex, -1)}} class="action" class:active={$historyPosition.round == roundIndex && $historyPosition.action == -1}>*** {round.street == 'preflop' ? 'HOLE CARDS' : round.street.toUpperCase()} *** <CardString cards={round.cards}></CardString></div>
       {#each round.actions as action, actionIndex}
         <div on:click={() => {performTo(roundIndex, actionIndex)}} class="action" class:active={$historyPosition.round == roundIndex && $historyPosition.action == actionIndex}>
           {#await player.fetch(action.player_id)}loading...{:then player}{player.nick}{/await}
           {action.action} {action.amount ? action.amount : ''}
+          {#if action.cards}
+            <CardString cards={action.cards}></CardString>
+          {/if}
         </div>
       {/each}
     </div>
   {/each}
+  <div class="pots">
+    {#each history.pots as pot}
+      {#each pot.player_wins as win}
+        {#await player.fetch(win.player_id)}loading...{:then player}{player.nick} wins {win.win_amount}{/await}
+      {/each}
+    {/each}
+  </div>
 </div>
 
 <div class="main_area">
-  <Table bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table}></Table>
+  <Table bind:state={tableState} bind:this={table}></Table>
   
   <div class="panel">
     <button class="btn" on:click={performToPreviousAction}>&lt; Back</button>

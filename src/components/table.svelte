@@ -9,6 +9,7 @@ import { vortex } from '@/transitions'
 import Stack from './stack.svelte'
 import { onMount } from 'svelte';
 
+
 const dispatch = createEventDispatcher();
 
 const [send, receive] = crossfade({
@@ -35,10 +36,11 @@ function deal(node, {rotate = 0, card, seat, duration}) {
   const fromRect = pot.getBoundingClientRect();
   const targetRect = node.getBoundingClientRect();
   const fromX = fromRect.left + fromRect.width / 2 - targetRect.width / 2;
-  const fromY = fromRect.top + fromRect.height / 2 - targetRect.height / 2;
+  // const fromY = fromRect.top + fromRect.height / 2 - targetRect.height / 2;
+  const fromY = -80;
   const deltaX = fromX - targetRect.left;
   const deltaY = fromY - targetRect.top;
-  const delay = 180 * card;
+  const delay = 120 * card;
   const transition = {
     delay: zeroIfAnimationsDisabled(delay),
     duration,
@@ -58,10 +60,12 @@ export let state;
 export let heroIndex = 0;
 let pot;
 let seatElements = [];
+let playerSize = 36;
 
 const defaultState = {
   seats: [],
-	board: [],
+  board: [],
+  calledOutCards: [],
 	activeSeatIndex: null,
 	dealerSeat: null,
 	bet: 0,
@@ -146,7 +150,7 @@ export function perform(action) {
 
   if (action.action == 'Fold') {
     let seat = getSeatByPlayerId(action.player_id)
-    state.seats[seat].cards = null
+    state.seats[seat].cards = []
     state.seats[seat].lastAction = 'Folded'
   }
 
@@ -180,7 +184,29 @@ export function perform(action) {
     state.minRaiseTo = 2 * action.amount
   }
 
+  if (action.action == 'Shows Cards') {
+    let seat = getSeatByPlayerId(action.player_id)
+    state.seats[seat].cards = action.cards
+  }
+
 }
+
+// onMount(function() {
+//   setInterval(function() {
+//     heroIndex++
+//     heroIndex %= 7
+//     if (state.calledOutCards.length == 0) {
+//       state.seats[2].cards = ['As', 'Ac']
+//       state.calledOutCards = ['As', '4d', 'Jc']
+//     }
+//     else {
+//       state.calledOutCards = []
+//       // state.seats[2].cards = ['?', '?']
+//     }
+//     state.seats = state.seats
+
+//   }, 1000)
+// })
 
 function seatClass(index) {
   // We rotate the seat so that "heroIndex" always is in the bottom center
@@ -191,42 +217,44 @@ function seatClass(index) {
 
 function seatCSS(index) {
   // We rotate the seat so that "heroIndex" always is in the bottom center
-
   index = (state.seats.length + index - heroIndex) % state.seats.length
-  let profileSize = '40px';
   let panelHeight = '20%';
   if (index == 0) {
-    return `left: calc(50% - (${profileSize} / 2));top: calc(100% - ${panelHeight});`
+    return `left: calc(50%);top: calc(100% - ${panelHeight});`
   }
   else if (index == 1) {
-    return `left: calc(${profileSize} / 2 + 10%);top: calc(240px + 120px);`
+    return `left: calc(${playerSize}px / 2 + 10%);top: 366px;`
   }
   else if (index == 2) {
-    return `left: calc(${profileSize} / 2 + 10%);top: calc(120px + 120px);`
+    return `left: calc(${playerSize}px / 2 + 10%);top: 255px;`
   }
   else if (index == 3) {
-    return `left: calc(${profileSize} / 2 + 10%);top: calc(0px + 120px);`
+    return `left: calc(${playerSize}px / 2 + 10%);top: 65px;`
   }
   else if (index == 4) {
-    return `left: calc(100% - (${profileSize} / 2 + 10%));top: calc(0px + 120px);`
+    return `left: calc(100% - (${playerSize}px / 2 + 10%));top: 65px;`
   }
   else if (index == 5) {
-    return `left: calc(100% - (${profileSize} / 2 + 10%));top: calc(120px + 120px);`
+    return `left: calc(100% - (${playerSize}px / 2 + 10%));top: 255px;`
   }
   else if (index == 6) {
-    return `left: calc(100% - (${profileSize} / 2 + 10%));top: calc(240px + 120px);`
+    return `left: calc(100% - (${playerSize}px / 2 + 10%));top: 366px;`
   }
 }
 
 </script>
 
 <style lang="scss">
-$profileSize: 40px;
+
 
 @mixin narrow {
   @media (max-width: 800px) { @content; }
 }
-
+.table.callingout {
+  .card:not(.calledout) {
+    opacity: 0.3;
+  }
+}
 .table {
   background-image: url('/felt.png');
   color: white;
@@ -234,18 +262,26 @@ $profileSize: 40px;
   width: 100%;
   // background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.1) 70%,rgba(0,0,0,0.3) 100%);
   .board {
-    width: 40%;
+    width: 55%;
     position: absolute;
     left: 50%;
-    top: 200px;
+    top: 130px;
     transform: translate(-50%, 0);
     .cards {
-      // height: $profileSize * 1.4;
+      // height: var(--playerSize) * 1.4;
       .card {
         width: calc(20%);
+        transition: all 0.3s;
+        &.calledout {
+          transform: scale(1.1) translateY(-20px) !important;
+          z-index: 10;
+          box-shadow: 0 0 0px 3px #d612dd;
+        }
       }
     }
     .pot {
+      margin-top: 20px;
+      width: 100%;
       text-align: center;
       font-size: 20px;
     }
@@ -264,7 +300,7 @@ $profileSize: 40px;
     .profile_pic img {
       box-shadow: 0 0 0px 2px yellow;
     }
-    .lower_box {
+    .detailsbox {
       box-shadow: 0 0 0px 2px yellow;
     }
   }
@@ -278,45 +314,49 @@ $profileSize: 40px;
   
   .cards {
     position: absolute;
-    height: $profileSize;
-    width: $profileSize * 2;
+    height: var(--playerSize);
+    width: calc(var(--playerSize) * 1.8);
     bottom: 0;
     transform: translate(-50%, 0);
     // overflow: hidden;
     z-index: 1;
     .card {
-      width: $profileSize;
+      width: calc(var(--playerSize) * 0.9);
       position: absolute;
       box-shadow: 0 0 2px rgba(0,0,0,0.8);
+      transition: all 0.3s;
       &.card_0 {
-        transform: rotate(-5deg);
+        transform: rotate(-5deg) rotateY(180deg);
         left: 0;
+        &.turned {
+          transform: rotate(-5deg);
+        }
       }
       &.card_1 {
-        transform: rotate(12deg);
+        transform: rotate(12deg) rotateY(180deg);
         right: 0;
+        &.turned {
+          transform: rotate(12deg);
+        }
       }
     }
-    @include narrow {
-      width: $profileSize * 1.4;
-      height: $profileSize / 1.4;
-      .card {
-        width: $profileSize * 1.4 / 2;
-      }
-    }
+    // @include narrow {
+    //   width: var(--playerSize) * 1.4;
+    //   height: var(--playerSize) / 1.4;
+    //   .card {
+    //     width: var(--playerSize) * 1.4 / 2;
+    //   }
+    // }
   }
-  .lower_box {
+  .detailsbox {
     position: absolute;
-    width: $profileSize * 3;
+    width: calc(var(--playerSize) * 2);
+    height: calc(var(--playerSize));
     background: rgba(0, 0, 0, 0.8);
     z-index: 2;
-    height: $profileSize;
     transform: translate(-50%, 0);
     border-radius: 10px;
     text-align: center;
-    @include narrow {
-      width: $profileSize * 2;
-    }
   }
   .committed {
     position: absolute;
@@ -324,22 +364,18 @@ $profileSize: 40px;
     white-space: nowrap;
     .chips {
       position: relative;
-      width: $profileSize / 1.6;
+      width: calc(var(--playerSize) / 1.6);
     }
   }
   .profile_pic {
-    z-index: 5;
-    width: $profileSize;
-    height: $profileSize;
     position: absolute;
     // transform: translate(-50%, -50%);
-    @include narrow {
-      z-index: 0;
-      width: $profileSize * 2;
-      height: $profileSize * 2;
-      transform: translate(-50%, 0);
-      bottom: -$profileSize / 2;
-    }
+    transition: all 0.3s;
+    z-index: 0;
+    width: calc(var(--playerSize) * 2);
+    height: calc(var(--playerSize) * 2);
+    transform: translate(-50%, 0);
+    bottom: calc(var(--playerSize) / -2);
     .pic {
       box-shadow: -1px 1px 2px rgba(0,0,0,0.5);
       border-radius: 100px;
@@ -348,82 +384,90 @@ $profileSize: 40px;
     }
   }
   .dealer {
-    width: $profileSize / 1.5;
+    width: calc(var(--playerSize) / 1.5);
     position: absolute;
     z-index: 3;
     box-shadow: 0 0 4px -2px rgba(0,0,0,0.8);
     border-radius: 10px;
-    top: $profileSize / 1.5;
+    top: calc(var(--playerSize) / 1.5);
   }
   .last_action {
     position: absolute;
     white-space: nowrap;
-    bottom: -$profileSize;
+    bottom: calc(var(--playerSize) * -1);
+  }
+  &.right, &.left {
+    .card.calledout {
+      transform: scale(1.2) translateY(-6px) !important;
+      z-index: 10;
+      box-shadow: 0 0 0px 3px #d612dd;
+    }
   }
   &.right {
     .dealer {
-      right: -$profileSize * 1.5;
-    }
-    .profile_pic {
-      left: $profileSize;
-      @include narrow {
-        left: initial;
-      }
+      right: calc(var(--playerSize) * -1.5);
     }
     .committed, .last_action {
-      right: $profileSize * 1.5 + 10px;
+      right: calc(var(--playerSize) * 1.25);
       text-align: right;
-      @include narrow {
-        right: $profileSize * 1 + 5px;
-      }
     }
     
   }
   &.left, &.middle {
     .dealer {
-      left: -$profileSize * 1.5;
+      left: calc(var(--playerSize) * -1.5);
     }
-    .profile_pic {
-      right: $profileSize;
-      @include narrow {
-        right: initial;
-      }
-    }
+    
   }
   &.left {
     .committed, .last_action {
-      left: $profileSize * 1.5 + 10px;
-      @include narrow {
-        left: $profileSize * 1 + 5px;
-      }
+      left: calc(var(--playerSize) * 1.25); 
     }
   }
   &.middle {
-    .committed, .last_action {
-      top: -$profileSize * 2 + 10px;
-      text-align: center;
-      @include narrow {
-        top: -$profileSize * 2.2 + 5px;
-        left: -$profileSize / 4;
+    .cards {
+      width: calc(var(--playerSize) * 3);
+      .card {
+        width: calc(var(--playerSize) * 2);
+        &.calledout {
+          transform: translateY(-50px) !important;
+          z-index: 10;
+          box-shadow: 0 0 0px 3px #d612dd;
+        }
       }
     }
+    .profile_pic {
+      left: calc(var(--playerSize) * -3);
+      width: calc(var(--playerSize) * 2);
+      height: calc(var(--playerSize) * 2);
+      bottom: -30px;
+    }
+    .detailsbox {
+      left: calc(var(--playerSize) * -3);
+      bottom: calc(var(--playerSize) * -1.5);
+      width: calc(var(--playerSize) * 3);
+    }
+    .committed, .last_action {
+      text-align: center;
+      top: calc(var(--playerSize) * -1.7);
+      left: calc(var(--playerSize) * -2.3);
+    }
   }
-  
 }
 </style>
 
-<div class="table">
+<div class="table" style="--playerSize: {playerSize}px" class:callingout={state.calledOutCards.length > 0}>
   <div class="board">
     <div class="cards">
-      {#each state.board as boardCard}
-        <img class="card" in:fly="{{ y: -25, duration: zeroIfAnimationsDisabled(450) }}" src="/cards/{boardCard.toLowerCase()}.png" alt={boardCard}>
+      {#each state.board as card, index}
+        <img class="card" class:calledout={state.calledOutCards.indexOf(card) !== -1} in:deal="{{ seat: 0, card:index,y: -25, duration: zeroIfAnimationsDisabled(450) }}" src="/cards/{card.toLowerCase()}.png" alt={card}>
       {/each}
     </div>
     <div bind:this={pot} class="pot">
       Pot: {state.pot}
-    </div>
-    <div class="committed">
-      {totalCommitted}
+      <div class="committed">
+        {totalCommitted}
+      </div>
     </div>
   </div>
   <div class="pot">
@@ -438,7 +482,7 @@ $profileSize: 40px;
         <!-- TODO: this is calling player.fetch a lot of times... why? -->
         <div class="cards">
           {#each state.seats[index].cards as card, cardIndex}
-            <img class="card card_{cardIndex}" alt="?" src="/cards/back.png" out:fly={{y: -60, x: cardIndex == 0 ? 20 : - 20, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(600)}}>  
+            <img class="card card_{cardIndex}" class:calledout={state.calledOutCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, x: cardIndex == 0 ? 20 : - 20, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(600)}}>  
           {/each}
         </div>
       
@@ -446,7 +490,7 @@ $profileSize: 40px;
           <div class="profile_pic">
             <img src={player.profile_pic} alt={player.nick} class="pic">
           </div>
-          <div class="lower_box">
+          <div class="detailsbox">
             <div class="name">
               {player.nick}
             </div>
@@ -464,7 +508,7 @@ $profileSize: 40px;
         <div class="committed">
           {#if state.seats[index].committed > 0}
             <div out:vortex|local={{target: pot, duration: zeroIfAnimationsDisabled(700)}} class="chips">
-              <Stack seat={state.seats[index]}></Stack>
+              <Stack seatClass={seatClass(index)} seat={state.seats[index]}></Stack>
             </div>
           {/if}
         </div>
