@@ -72,7 +72,7 @@ const defaultState = {
 	pot: 0
 };
 
-const initialState = JSON.parse(JSON.stringify(state || defaultState));
+let initialState = JSON.parse(JSON.stringify(state || defaultState));
 
 export let animations = true;
 function zeroIfAnimationsDisabled(time) { return animations ? time : 0 }
@@ -81,11 +81,13 @@ function zeroIfAnimationsDisabled(time) { return animations ? time : 0 }
 export function reset(newInitialState) {
   if (newInitialState) initialState = newInitialState;
   state = Object.assign({}, defaultState, JSON.parse(JSON.stringify(initialState)));
+ 
 }
 
 reset();
 
 export function getSeatByPlayerId(playerId) {
+ 
   for (let index = 0; index < state.seats.length; index++) {
     const seat = state.seats[index];
     if (seat && seat.player_id == playerId) return index
@@ -119,7 +121,7 @@ export function startRound(round) {
   if (round.cards && round.cards.length > 0) state.board = round.cards
   state.seats.filter(n=>n).map((seat) => seat.lastAction = null)
   state.seats.filter(n=>n).map((seat) => {
-    state.pot += seat.committed;
+    // state.pot += seat.committed;
     seat.committed = 0;
     seat.chips = []
   })
@@ -130,7 +132,7 @@ export function startRound(round) {
 export function perform(action) {
   if (action.action == 'Deal Cards') {
     let seat = getSeatByPlayerId(action.player_id)
-    state.seats[seat].cards = ['?', '?']
+    state.seats[seat].cards = action.cards
   }
 
   if (action.action == 'Post SB') {
@@ -158,11 +160,10 @@ export function perform(action) {
     let seat = getSeatByPlayerId(action.player_id)
     
     // If a player faces a $50 bet and raises by $100 to $150, the amount is $150.
-    let oldMinRaiseTo = state.minRaiseTo
+    state.minRaiseTo = 2 * (state.seats[seat].committed + action.amount) - state.maxCommitment
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
-    state.seats[seat].lastAction = 'Raise'
-    state.minRaiseTo = 2 * state.seats[seat].committed - state.minRaiseTo
+    state.seats[seat].lastAction = 'Raise' 
   }
 
   if (action.action == 'Check') {
@@ -218,7 +219,7 @@ function seatClass(index) {
 function seatCSS(index) {
   // We rotate the seat so that "heroIndex" always is in the bottom center
   index = (state.seats.length + index - heroIndex) % state.seats.length
-  let panelHeight = '20%';
+  let panelHeight = '23%';
   if (index == 0) {
     return `left: calc(50%);top: calc(100% - ${panelHeight});`
   }
@@ -326,17 +327,17 @@ function seatCSS(index) {
       box-shadow: 0 0 2px rgba(0,0,0,0.8);
       transition: all 0.3s;
       &.card_0 {
-        transform: rotate(-5deg) rotateY(180deg);
+        transform: rotateZ(-5deg) rotateY(180deg);
         left: 0;
         &.turned {
-          transform: rotateZ(0) translate(0px, -10px) scale(1.3);
+          transform: rotate(0);
         }
       }
       &.card_1 {
-        transform: rotate(12deg) rotateY(180deg);
+        transform: rotateZ(12deg) rotateY(180deg);
         right: 0;
         &.turned {
-          transform: rotateZ(0) translate(0px, -10px) scale(1.3);
+          transform: rotateZ(0);
         }
       }
     }
@@ -428,22 +429,13 @@ function seatCSS(index) {
     .cards {
       width: calc(var(--playerSize) * 3);
       .card {
-        width: calc(var(--playerSize) * 2);
+        width: calc(var(--playerSize) * 1.8);
         &.calledout {
           transform: translateY(-50px) !important;
           z-index: 10;
           box-shadow: 0 0 0px 3px #d612dd;
         }
-        &.card_0 {
-          &.turned {
-            transform: rotateZ(0) translate(-20px, -100px);
-          }
-        }
-        &.card_1 {
-          &.turned {
-            transform: rotateZ(0) translate(20px, -100px);
-          }
-        }
+
       }
     }
     .profile_pic {
@@ -466,11 +458,11 @@ function seatCSS(index) {
 }
 </style>
 
-<div class="table" style="--playerSize: {playerSize}px" class:callingout={state.calledOutCards.length > 0}>
+<div class="table" style="--playerSize: {playerSize}px" class:callingout={state.calledOutCards && state.calledOutCards.length > 0}>
   <div class="board">
     <div class="cards">
       {#each state.board as card, index}
-        <img class="card" class:calledout={state.calledOutCards.indexOf(card) !== -1} in:deal="{{ seat: 0, card:index,y: -25, duration: zeroIfAnimationsDisabled(450) }}" src="/cards/{card.toLowerCase()}.png" alt={card}>
+        <img class="card" class:calledout={state.calledOutCards && state.calledOutCards.indexOf(card) !== -1} in:deal="{{ seat: 0, card:index,y: -25, duration: zeroIfAnimationsDisabled(450) }}" src="/cards/{card.toLowerCase()}.png" alt={card}>
       {/each}
     </div>
     <div bind:this={pot} class="pot">
@@ -493,11 +485,13 @@ function seatCSS(index) {
           <img class="dealer" in:receive={'dealer'} out:send={'dealer'} src="/button.png" alt="DEALER">
         {/if}
         <!-- TODO: this is calling player.fetch a lot of times... why? -->
-        <div class="cards">
-          {#each state.seats[index].cards as card, cardIndex}
-            <img class="card card_{cardIndex}" class:calledout={state.calledOutCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, x: cardIndex == 0 ? -20 : 20, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(600)}}>  
-          {/each}
-        </div>
+        {#if state.seats[index].cards}
+          <div class="cards">
+            {#each state.seats[index].cards as card, cardIndex}
+              <img class="card card_{cardIndex}" class:calledout={state.calledOutCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, x: cardIndex == 0 ? -20 : 20, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(600)}}>  
+            {/each}
+          </div>
+        {/if}
       
         {#await player.fetch(state.seats[index].player_id) then player}
           <div class="profile_pic">

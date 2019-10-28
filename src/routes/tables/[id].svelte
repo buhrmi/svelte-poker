@@ -20,10 +20,15 @@ export async function preload(page, session) {
   let { session, page } = stores();
 
   export let tableData;
-  let tableState = {settings: tableData.settings, seats: Array(tableData.settings.table_size)};
+  let tableState = {
+    settings: tableData.settings,
+    seats: Array(tableData.settings.table_size),
+    minRaiseTo: tableData.settings.big_blind_amount
+  };
+
   let table;
-  let history = {rounds: []};
-  let hands = [{history}]
+  let history = {};
+  let hands = []
 
   let currentRoundIndex = 0;
   let currentActionIndex = 0;
@@ -65,26 +70,39 @@ export async function preload(page, session) {
     socket.onmessage = (event) => handleMessage(JSON.parse(event.data))
   }
 
+  let tempActions = []
   function handleMessage(message) {
     console.log(message);
 
     // It's an action from https://hh-specs.handhistory.org/action-object/action
     if (message.action) {
-      if (history.rounds[history.rounds.length-1]) history.rounds[history.rounds.length-1].actions.push(message);
-      if (!replayingHistory) {
-        currentActionIndex++;
-        table.perform(message);
+      if (history.rounds[history.rounds.length-1]) {
+        history.rounds[history.rounds.length-1].actions.push(message);
       }
+      else {
+        tempActions.push(message)
+      }
+      hands = hands
+      console.log('asdasd')
+      table.perform(message);
     }
+
     // if the message has a "street" property, it's the beginning of a new round
     if (message.type == 'betting-round-started') {
       // Looks like there is a bug in svelte and reactivity does not work when setting tableState.seats directly.
-      history.rounds.push({street: message.betting_round, actions: [], cards: message.board})
+      if (!history.rounds) history.rounds = []
+      history.rounds.push({street: message.betting_round, actions: tempActions, cards: message.board})
+      tempActions = []
+      history.rounds = history.rounds
       tableState.board = message.board
+      if (message.betting_round !== 'preflop') {
+        tableState.minRaiseTo = tableState.settings.big_blind_amount
+      }
     }
 
     if (message.type == 'betting-round-ended') {
       tableState.activeSeatIndex = null
+      tableState.pot = message.total_gathered
       tableState.seats.filter(n=>n).map((s) => s.lastAction = null)
       tableState.seats.filter(n=>n).map((seat) => seat.committed = 0)
     }
@@ -99,7 +117,11 @@ export async function preload(page, session) {
     // It's a table state
     if (message.type == 'table-state') {
       // Looks like there is a bug in svelte and reactivity does not work when setting tableState.seats directly.
-      tableState.seats = message.seats
+      for (let i = 0; i < message.seats.length; i++) {
+        const seat = message.seats[i];
+        if (!seat) continue;
+        tableState.seats[i] = Object.assign({}, tableState.seats[i], seat)
+      }
     }
 
     if (message.type == 'sit-down') {
@@ -122,29 +144,70 @@ export async function preload(page, session) {
       tableState.seats[message.seat].stack += message.amount
     }
 
+    if (message.type == 'last-hand-id') {
+      history.game_number = message.hand_id
+      hands=hands
+    }
+
     if (message.type == 'hand-started') {
       history = {rounds: []}
-      hands.push({id: null, history})
+      hands.push(history)
+      hands = hands
+      tableState.pot = 0
+      tableState.dealerSeat = message.dealer.seat
+      ensureHolecards(message.participants)
+    }
+
+    if (message.type == 'hand-ended') {
+      // TODO: win chips animation
+      
+    }
+
+    if (message.type == 'player-secret') {
+      let seat = table.getSeatByPlayerId($player.id)
+      tableState.seats[seat].cards = message.secret
     }
 
     // It's partial hand history
-    if (message.type == 'history') {
+    if (message.type == 'hand-state') {
       // got partial history
       history = message
-      table.reset(buildTableStateFromHistory(history));
-      // TODO: replay hand
+      hands.push(history)
+      hands = hands
+      const initialTableState = {
+        minRaiseTo: tableData.settings.small_blind_amount,
+        settings: tableData.settings,
+        seats: Array(history.table_size),
+        dealerSeat: message.dealer_seat
+      };
+      for (const player of history.players) {
+        player.stack = player.starting_stack;
+        player.bet = 0;
+        player.player_id = player.id
+        player.cards = ['?','?']
+        initialTableState.seats[player.seat] = player;
+      }
+      table.reset(initialTableState);
+      
+      for (let ri = 0; ri < history.rounds.length; ri++) {
+        const round = history.rounds[ri];
+        for (let ai = 0; ai < round.actions.length; ai++) {
+          const action = round.actions[ai];
+          tableState.animations = false;
+          table.perform(action);
+          tick().then(() => tableState.animations = true);
+        }
+      }
     }
   }
 
-  function buildTableStateFromHistory(history) {
-    initialTableState = {seats: Array(history.table_size)};
-    for (const player of history.players) {
-      player.stack = player.starting_stack;
-      player.bet = 0;
-      initialTableState.dealerSeat = history.dealer_seat;
-      initialTableState.seats[player.seat] = player;
+  function ensureHolecards(participants) {
+    for (let i = 0; i < participants.length; i++) {
+      const p = participants[i];
+      if (!tableState.seats[p.seat].cards || tableState.seats[p.seat].cards.length == 0 ) {
+        tableState.seats[p.seat].cards = ['?', '?']
+      }
     }
-    return initialTableState;
   }
 
   function fold() {
@@ -178,48 +241,6 @@ export async function preload(page, session) {
   }
   function sitOut() {
     socket.send(JSON.stringify({msg: "sit-out"}))
-  }
-
-  function performNextAction() {
-    currentActionIndex++;
-    if (currentActionIndex == history.rounds[currentRoundIndex].actions.length) {
-      currentRoundIndex++;
-      currentActionIndex = -1;
-      table.startRound(history.rounds[currentRoundIndex]);
-    }
-    else {
-      table.perform(history.rounds[currentRoundIndex].actions[currentActionIndex]);
-    }
-
-  }
-
-  function performToPreviousAction() {
-    // Dont do anything if on the first action in the history
-    if (currentRoundIndex == 0 && currentActionIndex == 0) return;
-
-    currentActionIndex--;
-    if (currentActionIndex < -1) {
-      currentRoundIndex--;
-      currentActionIndex = history.rounds[currentRoundIndex].actions.length - 1;
-    }
-    performTo(currentRoundIndex, currentActionIndex)
-  }
-
-  // Resets the table state and performs every action until we reach roundIndex, actionIndex
-  function performTo(roundIndex, actionIndex) {
-    table.reset();
-    table.animations = false;
-    for (let ri = 0; ri <= roundIndex; ri++) {
-      const round = history.rounds[ri];
-      table.startRound(round);
-      for (let ai = 0; ai <= (ri == roundIndex ? actionIndex : round.actions.length - 1); ai++) {
-        const action = round.actions[ai];
-        table.perform(action);
-      }
-    }
-    currentRoundIndex = roundIndex;
-    currentActionIndex = actionIndex;
-    tick().then(() => table.animations = true)
   }
 
   async function fakeDeposit() {
@@ -272,23 +293,28 @@ export async function preload(page, session) {
 </style>
 
 <div class="history">
-  {#each hands as hand, handIndex}
+  {#each hands as hand}
     <div class="hand">
-      <div class="action">--- NEW HAND ---</div>
-      {#each hand.history.rounds as round, roundIndex}
-        <div class="round">
-          <div on:click={() => {performTo(roundIndex, -1)}} class="action" class:active={currentRoundIndex == roundIndex && currentActionIndex == -1}>*** {round.street == 'preflop' ? 'HOLE CARDS' : round.street.toUpperCase()} ***</div>
-          {#each round.actions as action, actionIndex}
-            <div on:click={() => {performTo(roundIndex, actionIndex)}} class="action" class:active={currentRoundIndex == roundIndex && currentActionIndex == actionIndex}>
-              {#await player.fetch(action.player_id)}loading...{:then player}{player.nick}{/await}
-              {action.action} {action.amount ? action.amount : ''}
-            </div>
-          {/each}
-        </div>
-      {/each}
-      {#if hand.id}
+      <div class="action">--- HAND {#if hand.game_number}{hand.game_number}{/if}STARTED ---</div>
+    
+      {#if hand && hand.rounds}
+        {#each hand.rounds as round, roundIndex}
+          <div class="round">
+            <div class="action" class:active={currentRoundIndex == roundIndex && currentActionIndex == -1}>*** {round.street == 'preflop' ? 'HOLE CARDS' : round.street.toUpperCase()} ***</div>
+            {#each round.actions as action, actionIndex}
+              {#if action.action !== 'Deal Cards'}
+                <div class="action" >
+                  {#await player.fetch(action.player_id)}loading...{:then player}{player.nick}{/await}
+                  {action.action} {action.amount ? action.amount : ''}
+                </div>
+              {/if}
+            {/each}
+          </div>
+        {/each}
+      {/if}
+      {#if hand.game_number}
         <div class="action">
-          <a href="/hands/{hand.id}" target="_blank">REVIEW HAND</a>
+          <a href="/hands/{hand.game_number}" target="_blank">REVIEW HAND</a>
         </div>
       {/if}
     </div>
@@ -299,7 +325,7 @@ export async function preload(page, session) {
   <Table bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
 
   <div class="panel">
-    {#if playerIndex}
+    {#if playerIndex !== null}
       {#if isPlayerSittingIn}
         <button on:click={() => sitOut()}>Sit Out</button>
       {:else}
@@ -311,7 +337,7 @@ export async function preload(page, session) {
       <button class="btn" on:click={performToPreviousAction}>&lt; Rewind</button>
       <button class="btn" on:click={performNextAction}>Next &gt;</button> (Round: {history.rounds[currentRoundIndex].street}, Action: {currentActionIndex})
     {:else}
-      {#if playerIndex}
+      {#if playerIndex !== null}
         <div class="btn {isPlayersTurn ? '' : 'disabled'} fold" on:click={() => fold()}>Fold</div>
         {#if tableState.seats[playerIndex] && tableState.maxCommitment == tableState.seats[playerIndex].committed}
           <div class="btn {isPlayersTurn ? '' : 'disabled'} check" on:click={() => check()}>Check</div>
@@ -329,7 +355,7 @@ export async function preload(page, session) {
     <div class="debug">
       {#if $player.id}
         Player: {$player.nick}, Balance {$player.balances[tableData.currency]} <button on:click={fakeDeposit}>Make fake deposit</button><br>
-        state: {JSON.stringify(tableState)}
+        <!-- state: {JSON.stringify(tableState)} -->
       {/if}
     </div>
   </div>

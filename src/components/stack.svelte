@@ -3,8 +3,8 @@
   import { onMount } from 'svelte';
   export let seatClass;
   export let seat;
-  if (!seat.chips || seat.committed == 0) seat.chips = [];
-  
+
+  let totalChips = 0;
   let alreadyExisted = 0
   let denominations = [100000, 50000, 10000, 5000, 1000, 500, 100, 50, 10]
   let displayedCommited = 0
@@ -27,6 +27,18 @@
     }, 10)
   })
   $: {
+    if (!seat.chips || seat.committed == 0) seat.chips = [];
+  }
+  $: {
+
+    // If there are more chips outside than committed, start from the beginning
+    let currentlyOut = 0;
+    for (let i = 0; i < seat.chips.length; i++) {
+      currentlyOut += seat.chips[i];
+    }
+    if (currentlyOut > seat.committed) seat.chips = []
+
+
     let remaining = seat.committed
     alreadyExisted = seat.chips.length
     for (let i = 0; i < seat.chips.length; i++) {
@@ -67,14 +79,16 @@
 </style>
 
 <div class="stack" >
-  {#each seat.chips.reverse() as chip, n}
-    <div class="chip">
-      <img in:fly={{ ...flyFrom(), delay: (n - alreadyExisted) * 170, duration: 400 }} src="/chips/{chip}.png" alt={chip} style="z-index: {n};top: -{n * 4}px"/>
-    </div>
-  {/each}
-  {#if displayedCommited}
-    <div class="amount" style="top: -{seat.chips.length * 4 + 20}px">
-      {displayedCommited}
-    </div>
+  {#if seat.chips}
+    {#each seat.chips.reverse() as chip, n}
+      <div class="chip">
+        <img in:fly={{ ...flyFrom(), delay: (n - alreadyExisted) * 170, duration: 400 }} src="/chips/{chip}.png" alt={chip} style="z-index: {n};top: -{n * 4}px"/>
+      </div>
+    {/each}
+    {#if displayedCommited}
+      <div class="amount" style="top: -{seat.chips.length * 4 + 20}px">
+        {displayedCommited}
+      </div>
+    {/if}
   {/if}
 </div>

@@ -9,8 +9,8 @@ import pkg from './package.json';
 import autoPreprocess from 'svelte-preprocess'
 
 const mode = process.env.NODE_ENV;
-const api = process.env.API_URL || `http://buhrmi-desktop.dyndns.org:3001`
-const gameServer = process.env.ENGINE_URL || 'ws://192.168.31.15:3000'
+const api = process.env.API_URL || `http://buhrmi-desktop.dyndns.org`
+const gameServer = process.env.ENGINE_URL || 'ws://192.168.0.107:3000'
 const dev = mode === 'development';
 
 const onwarn = (warning, onwarn) => (warning.code === 'CIRCULAR_DEPENDENCY' && /[/\\]@sapper[/\\]/.test(warning.message)) || onwarn(warning);
