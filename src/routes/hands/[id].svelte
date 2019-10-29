@@ -28,7 +28,7 @@ export async function preload(page, session) {
     player.stack = player.starting_stack;
     player.chips = []
     player.cards = []
-    player.currentChatMessage = 'shitcoins looool buy some love. free handjobs'
+    // player.currentChatMessage = 'shitcoins looool buy some love. free handjobs'
     player.committed = 0;
     player.player_id = player.id
     player.sitting_in = true
@@ -85,7 +85,10 @@ export async function preload(page, session) {
 
   function performNextAction() {
     $historyPosition.action++;
-    if ($historyPosition.action == currentRound.actions.length) {
+    if ($historyPosition.action == currentRound.actions.length && currentRound == lastRound) {
+      table.playWinningAnimation(history.pots)
+    }
+    else if ($historyPosition.action == currentRound.actions.length) {
       $historyPosition.round++;
       $historyPosition.action = -1;
       table.startRound(history.rounds[$historyPosition.round]);
@@ -153,6 +156,7 @@ export async function preload(page, session) {
   @include narrow {
     display: none;
   }
+  overflow-y: auto;
   .pots {
     padding-left: 16px;
   }
@@ -205,7 +209,11 @@ export async function preload(page, session) {
   <div class="pots">
     {#each history.pots as pot}
       {#each pot.player_wins as win}
-        {#await player.fetch(win.player_id)}loading...{:then player}{player.nick} wins {win.win_amount}{/await}
+        {#if win.win_amount > 0}
+          <div class="winnings">
+            {#await player.fetch(win.player_id)}loading...{:then player}{player.nick} wins {win.win_amount}{/await}
+          </div>
+        {/if}
       {/each}
     {/each}
   </div>

@@ -1,34 +1,42 @@
 <script>
   export let amount = 0;
-
+  export let width = 30;
   let stacks = {};
+  
   let denominations = [100000, 50000, 10000, 5000, 1000, 500, 100, 50, 10]
-
+  let displayedAmount = 0
   $: {
-    let remaining = amount
-    let result = {}
+    if (amount < displayedAmount) {
+      stacks = {}
+      displayedAmount = 0
+    }
+    let amountToAdd = amount - displayedAmount
+    
     denominations.forEach(denomination => {
-      result[denomination] = Math.floor(remaining / denomination)
-      if (result[denomination] == 0) delete result[denomination] 
-      remaining = remaining % denomination
+      let numToAdd = Math.floor(amountToAdd / denomination)
+      if (numToAdd > 0) {
+        if (!stacks[denomination]) stacks[denomination] = 0
+        stacks[denomination] += numToAdd
+        displayedAmount += numToAdd * denomination
+      }
+      amountToAdd = amountToAdd % denomination
     });
-    stacks = result
   }
 </script>
 
 <style lang="scss">
 .stacks {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  // margin-bottom: 8%;
-  .stack {
-    max-width: 25%;
+  
+  .stack {  
+    display: inline-block;
+    position: relative;
+    vertical-align: top;
     .chip {
+      
+      width: 100%;
       position: relative;
-      margin-bottom: -93%;
       img {
-        display: block;
+        position: absolute;
         width: 100%;
       }
     }
@@ -36,11 +44,11 @@
 }
 </style>
 
-<div class="stacks" >
+<div class="stacks" style="height: {width}px">
   {#each Object.keys(stacks) as denomination}
-    <div class="stack">
+    <div class="stack" style="width: {width}px">
       {#each Array(stacks[denomination]) as _, n}
-        <div class="chip" style="z-index: {10-n}">
+        <div class="chip" style="top: -{n *4}px">
           <img src="/chips/{denomination}.png" alt={denomination}/>
         </div>
       {/each}

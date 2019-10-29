@@ -83,7 +83,6 @@ export async function preload(page, session) {
         tempActions.push(message)
       }
       hands = hands
-      console.log('asdasd')
       table.perform(message);
     }
 
@@ -323,6 +322,10 @@ export async function preload(page, session) {
 
 <div class="main_area">
   <Table bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
+  
+  {#if !connected}
+    Connecting. please wait
+  {/if}
 
   <div class="panel">
     {#if playerIndex !== null}
@@ -356,6 +359,8 @@ export async function preload(page, session) {
       {#if $player.id}
         Player: {$player.nick}, Balance {$player.balances[tableData.currency]} <button on:click={fakeDeposit}>Make fake deposit</button><br>
         <!-- state: {JSON.stringify(tableState)} -->
+      {:else}
+        Not logged in...
       {/if}
     </div>
   </div>

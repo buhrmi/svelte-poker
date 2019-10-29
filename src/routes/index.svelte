@@ -19,10 +19,11 @@ export let tables;
 </style>
 
 <div class="lobby">
-  <h1>Tables</h1>
+  <h1>Welcome to Shitty Poker</h1>
+
   {#each tables as table}
     <div class="table">
-      <a href="/tables/{table.id}">Table {table.id} - {table.settings.small_blind} / {table.settings.big_blind}</a>
+      <a href="/tables/{table.id}">Table {table.id} - {table.settings.small_blind_amount} / {table.settings.big_blind_amount}</a>
     </div>
   {/each}
 </div>

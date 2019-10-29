@@ -4,11 +4,14 @@
 import player from '../stores/player';
 import { fly, fade, crossfade } from 'svelte/transition';
 import { quintOut, cubicOut } from 'svelte/easing';
-import { createEventDispatcher } from 'svelte';
+import { createEventDispatcher, tick, onMount } from 'svelte';
 import { vortex } from '@/transitions'
+import solver from 'pokersolver';
+// This component is on a player seat
 import Stack from './stack.svelte'
-import { onMount } from 'svelte';
 
+// this is to render chips anywhere except on player seats
+import Chips from './chips.svelte'
 
 const dispatch = createEventDispatcher();
 
@@ -58,6 +61,7 @@ function deal(node, {rotate = 0, card, seat, duration}) {
 
 export let state;
 export let heroIndex = 1;
+export let isShowDown = false;
 let pot;
 let seatElements = [];
 let playerSize = 36;
@@ -65,7 +69,7 @@ let playerSize = 36;
 const defaultState = {
   seats: [],
   board: [],
-  calledOutCards: [],
+  strongestCards: [],
 	activeSeatIndex: null,
 	dealerSeat: null,
 	bet: 0,
@@ -117,15 +121,49 @@ $: {
   }
 }
 
+let solvedHands = []
+let strongestCards = []
+$: {
+  solvedHands = []
+  strongestCards = []
+  for (let i = 0; i < state.seats.length; i++) {
+    const seat = state.seats[i];
+    if (!seat) continue;
+    if (!seat.cards || seat.cards.length == 0 || seat.cards[0] == '?') continue;
+    const cards = state.board.concat(seat.cards)
+    solvedHands[i] = solver.Hand.solve(cards)
+    strongestCards = Hand.winners(solvedHands.filter(s=>s)).toString()
+  }
+}
+
+// round is a handhistory.org round object
 export function startRound(round) {
-  if (round.cards && round.cards.length > 0) state.board = round.cards
+  if (round.cards && round.cards.length > 0) state.board = state.board.concat(round.cards)
   state.seats.filter(n=>n).map((seat) => seat.lastAction = null)
+  let amountToAdd = 0
   state.seats.filter(n=>n).map((seat) => {
-    // state.pot += seat.committed;
-    seat.committed = 0;
+    amountToAdd += seat.committed
     seat.chips = []
+    seat.committed = 0;
   })
+  isShowDown = round.street == 'showdown'
   state.minRaiseTo = state.big_blind_amount
+  if (animations) {
+    setTimeout(() => {
+      state.pot += amountToAdd;
+    }, 300)
+  }
+  else {
+    state.pot += amountToAdd;
+  }
+}
+
+let winningPots
+export function playWinningAnimation(pots) {
+  // Show the chips, then hide them again instantly: Let svelte do the animation as the out-transition
+  state.pot = 0
+  winningPots = pots;
+  tick().then(() => winningPots = null)
 }
 
 // See https://hh-specs.handhistory.org/action-object/action for a list of possible actions
@@ -196,12 +234,12 @@ export function perform(action) {
 //   setInterval(function() {
 //     heroIndex++
 //     heroIndex %= 7
-//     if (state.calledOutCards.length == 0) {
+//     if (strongestCards.length == 0) {
 //       state.seats[2].cards = ['As', 'Ac']
-//       state.calledOutCards = ['As', '4d', 'Jc']
+//       strongestCards = ['As', '4d', 'Jc']
 //     }
 //     else {
-//       state.calledOutCards = []
+//       strongestCards = []
 //       // state.seats[2].cards = ['?', '?']
 //     }
 //     state.seats = state.seats
@@ -251,16 +289,14 @@ function seatCSS(index) {
 @mixin narrow {
   @media (max-width: 800px) { @content; }
 }
-.table.callingout {
-  .card:not(.calledout) {
-    opacity: 0.3;
-  }
-}
+
 .table {
   background-image: url('/felt.png');
   color: white;
   height: 100%;
   width: 100%;
+  min-width: 356px;
+  position: absolute;
   // background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.1) 70%,rgba(0,0,0,0.3) 100%);
   .board {
     width: 55%;
@@ -270,25 +306,44 @@ function seatCSS(index) {
     transform: translate(-50%, 0);
     .cards {
       // height: var(--playerSize) * 1.4;
+      transition: all 0.3s;
+      top: 0;
+      &.showing_down {
+        .card {
+          position: relative;
+          filter: brightness(60%);
+          &.strongest {
+            transform: scale(1.0) translateY(-20px) !important;
+            z-index: 15;
+            box-shadow: 0 0 20px 3px rgba(0,0,0,0.3);
+            filter: brightness(100%);
+            
+          }
+        }
+      }
       .card {
         width: calc(20%);
         transition: all 0.3s;
-        &.calledout {
-          transform: scale(1.1) translateY(-20px) !important;
-          z-index: 10;
-          box-shadow: 0 0 0px 3px #d612dd;
-        }
+        transform: scale(1);
       }
     }
-    .pot {
-      margin-top: 20px;
-      width: 100%;
-      text-align: center;
-      font-size: 20px;
-    }
+  }
+  .pot {
+    top: 40vh;
+    width: 100%;
+    text-align: center;
+    font-size: 20px;
+    position: absolute;
     .committed {
       text-align: center;
       font-size: 15px;
+    }
+    .player_wins {
+      position: absolute;
+      width: 100%;
+      height: 0;
+      z-index: 10;
+      text-align: center;
     }
   }
 }
@@ -312,7 +367,13 @@ function seatCSS(index) {
     border-radius: 10px;
     transform: translate(-50%, -50%);
   }
-  
+  .hand_descr {
+    position: absolute;
+    z-index: 10;
+    transform: translate(-50%, 0);
+    top: calc(var(--playerSize) * -2);
+    white-space: nowrap;
+  }
   .cards {
     position: absolute;
     height: var(--playerSize);
@@ -321,11 +382,23 @@ function seatCSS(index) {
     transform: translate(-50%, 0);
     // overflow: hidden;
     z-index: 1;
+    transition: all 0.3s;
+    &.showing_down {
+      transform: translate(-50%, -50%);
+      width: calc(var(--playerSize) * 2);
+      filter: brightness(80%);
+      .card {
+        width: calc(var(--playerSize) );  
+      }
+    }
     .card {
       width: calc(var(--playerSize) * 0.9);
       position: absolute;
       box-shadow: 0 0 2px rgba(0,0,0,0.8);
       transition: all 0.3s;
+      &.strongest {
+        filter: brightness(100%);
+      }
       &.card_0 {
         transform: rotateZ(-5deg) rotateY(180deg);
         left: 0;
@@ -398,7 +471,7 @@ function seatCSS(index) {
     bottom: calc(var(--playerSize) * -1);
   }
   &.right, &.left {
-    .card.calledout {
+    .card.strongest {
       transform: scale(1.2) translateY(-6px) !important;
       z-index: 10;
       box-shadow: 0 0 0px 3px #d612dd;
@@ -430,7 +503,7 @@ function seatCSS(index) {
       width: calc(var(--playerSize) * 3);
       .card {
         width: calc(var(--playerSize) * 1.8);
-        &.calledout {
+        &.strongest {
           transform: translateY(-50px) !important;
           z-index: 10;
           box-shadow: 0 0 0px 3px #d612dd;
@@ -458,22 +531,33 @@ function seatCSS(index) {
 }
 </style>
 
-<div class="table" style="--playerSize: {playerSize}px" class:callingout={state.calledOutCards && state.calledOutCards.length > 0}>
+<div class="table" style="--playerSize: {playerSize}px" class:callingout={strongestCards && strongestCards.length > 0}>
   <div class="board">
-    <div class="cards">
+    <div class="cards" class:showing_down={isShowDown}>
       {#each state.board as card, index}
-        <img class="card" class:calledout={state.calledOutCards && state.calledOutCards.indexOf(card) !== -1} in:deal="{{ seat: 0, card:index,y: -25, duration: zeroIfAnimationsDisabled(450) }}" src="/cards/{card.toLowerCase()}.png" alt={card}>
+        <img class="card" class:strongest={strongestCards && strongestCards.indexOf(card) !== -1} in:deal="{{ seat: 0, card:index,y: -25, duration: zeroIfAnimationsDisabled(450) }}" src="/cards/{card.toLowerCase()}.png" alt={card}>
       {/each}
     </div>
-    <div bind:this={pot} class="pot">
-      Pot: {state.pot}
-      <div class="committed">
-        {totalCommitted}
-      </div>
-    </div>
   </div>
-  <div class="pot">
-  
+  <div  class="pot">
+    {#if winningPots}
+      {#each winningPots as winningPot}
+        {#each winningPot.player_wins as win}
+          <div class="player_wins">
+            <div out:vortex={{target: seatElements[getSeatByPlayerId(win.player_id)], duration: zeroIfAnimationsDisabled(700)}}>
+              <Chips amount={win.win_amount} width={playerSize}></Chips>
+            </div>
+          </div>
+        {/each}
+      {/each}
+    {/if}
+    <div bind:this={pot}>
+      <Chips amount={state.pot} width={playerSize}></Chips>
+    </div>
+    {state.pot}
+    <div class="committed">
+      {totalCommitted}
+    </div>
   </div>
   {#each Array(state.seats.length) as _, index}
     <div class="seat {seatClass(index, heroIndex)}" style={seatCSS(index, heroIndex)} class:active={state.activeSeatIndex == index} bind:this={seatElements[index]}>
@@ -486,11 +570,16 @@ function seatCSS(index) {
         {/if}
         <!-- TODO: this is calling player.fetch a lot of times... why? -->
         {#if state.seats[index].cards}
-          <div class="cards">
+          <div class="cards" class:showing_down={isShowDown}>
             {#each state.seats[index].cards as card, cardIndex}
-              <img class="card card_{cardIndex}" class:calledout={state.calledOutCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, x: cardIndex == 0 ? -20 : 20, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(600)}}>  
+              <img class="card card_{cardIndex}" class:strongest={strongestCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, x: cardIndex == 0 ? -20 : 20, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(600)}}>  
             {/each}
           </div>
+          {#if solvedHands[index]}
+          <div transition:fly class="hand_descr">
+            {solvedHands[index].descr}
+          </div>
+          {/if}
         {/if}
       
         {#await player.fetch(state.seats[index].player_id) then player}
@@ -514,7 +603,7 @@ function seatCSS(index) {
         </div>
         <div class="committed">
           {#if state.seats[index].committed > 0}
-            <div out:vortex|local={{target: pot, duration: zeroIfAnimationsDisabled(700)}} class="chips">
+            <div out:vortex|local={{target: pot, duration: zeroIfAnimationsDisabled(300)}} class="chips">
               <Stack seatClass={seatClass(index)} seat={state.seats[index]}></Stack>
             </div>
           {/if}

@@ -29,6 +29,8 @@ function symbol(suit) {
 
 {#each cards as card}
   <span class="card_string">
-    {card[0]}<span class="suit {card[1]}">{symbol(card[1])} </span> 
+    {#if card[0] !== '?'}
+      {card[0]}<span class="suit {card[1]}">{symbol(card[1])} </span>
+    {/if}
   </span>
 {/each}

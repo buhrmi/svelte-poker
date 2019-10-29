@@ -15,7 +15,7 @@
     else if (seatClass == 'right') {
       return {x: 30}
     }
-    return {y: 20, x: -20}
+    return {y: 50, x: -20}
   }
 
   onMount(function() {
