@@ -90,8 +90,7 @@ export function reset(newInitialState) {
 
 reset();
 
-export function getSeatByPlayerId(playerId) {
- 
+export function getSeatByPlayerId(playerId) { 
   for (let index = 0; index < state.seats.length; index++) {
     const seat = state.seats[index];
     if (seat && seat.player_id == playerId) return index
@@ -159,15 +158,27 @@ export function startRound(round) {
 }
 
 let winningPots
+let winningSeats = []
 export function playWinningAnimation(pots) {
   // Show the chips, then hide them again instantly: Let svelte do the animation as the out-transition
   state.pot = 0
   winningPots = pots;
+  for (let i = 0; i < pots.length; i++) {
+    const pot = pots[i];
+    for (let pwi = 0; pwi < pot.player_wins.length; pwi++) {
+      const win = pot.player_wins[pwi];
+      if (win.win_amount > 0) winningSeats.push(getSeatByPlayerId(win.player_id))
+      winningSeats = winningSeats
+    }
+  }
   tick().then(() => winningPots = null)
 }
 
 // See https://hh-specs.handhistory.org/action-object/action for a list of possible actions
 export function perform(action) {
+  winningSeats = []
+  winningPots = []
+
   if (action.action == 'Deal Cards') {
     let seat = getSeatByPlayerId(action.player_id)
     state.seats[seat].cards = action.cards
@@ -177,21 +188,21 @@ export function perform(action) {
     let seat = getSeatByPlayerId(action.player_id)
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
-    state.seats[seat].lastAction = 'Posted SB'
+    state.seats[seat].lastAction = 'Post SB'
   }
 
   if (action.action == 'Post BB') {
     let seat = getSeatByPlayerId(action.player_id)
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
-    state.seats[seat].lastAction = 'Posted BB'
+    state.seats[seat].lastAction = 'Post BB'
     state.minRaiseTo = 2 * action.amount
   }
 
   if (action.action == 'Fold') {
     let seat = getSeatByPlayerId(action.player_id)
     state.seats[seat].cards = []
-    state.seats[seat].lastAction = 'Folded'
+    state.seats[seat].lastAction = 'Fold'
   }
 
   if (action.action == 'Raise') {
@@ -212,7 +223,7 @@ export function perform(action) {
     let seat = getSeatByPlayerId(action.player_id)
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
-    state.seats[seat].lastAction = 'Called'
+    state.seats[seat].lastAction = 'Call'
   }
 
   if (action.action == 'Bet') {
@@ -315,9 +326,8 @@ function seatCSS(index) {
           &.strongest {
             transform: scale(1.0) translateY(-20px) !important;
             z-index: 15;
-            box-shadow: 0 0 20px 3px rgba(0,0,0,0.3);
+            box-shadow: 0 0 53px 6px white;
             filter: brightness(100%);
-            
           }
         }
       }
@@ -360,6 +370,11 @@ function seatCSS(index) {
       box-shadow: 0 0 0px 2px yellow;
     }
   }
+  &.winning {
+    .cards {
+      box-shadow: 0 0 33px 15px white;
+    }
+  }
   .btn.empty_seat {
     position: absolute;
     top: 0;
@@ -386,9 +401,12 @@ function seatCSS(index) {
     &.showing_down {
       transform: translate(-50%, -50%);
       width: calc(var(--playerSize) * 2);
-      filter: brightness(80%);
       .card {
+        filter: brightness(60%);
         width: calc(var(--playerSize) );  
+        &.strongest {
+          filter: brightness(100%);
+        }
       }
     }
     .card {
@@ -396,9 +414,6 @@ function seatCSS(index) {
       position: absolute;
       box-shadow: 0 0 2px rgba(0,0,0,0.8);
       transition: all 0.3s;
-      &.strongest {
-        filter: brightness(100%);
-      }
       &.card_0 {
         transform: rotateZ(-5deg) rotateY(180deg);
         left: 0;
@@ -468,20 +483,23 @@ function seatCSS(index) {
   .last_action {
     position: absolute;
     white-space: nowrap;
-    bottom: calc(var(--playerSize) * -1);
-  }
-  &.right, &.left {
-    .card.strongest {
-      transform: scale(1.2) translateY(-6px) !important;
-      z-index: 10;
-      box-shadow: 0 0 0px 3px #d612dd;
-    }
+    bottom: calc(var(--playerSize) / 3);
+    transform: translate(-50%, 0);
+    z-index: 10;
+    padding: 1px 2px;
+    font-size: 13px;
+    line-height: 13px;
+    background: linear-gradient(180deg, rgba(191,224,255,1) 0%, rgba(72,168,251,1) 100%);
+    border: 1px solid rgba(0,0,0,0.3);
+    color: rgba(0,0,0,0.8);
+    border-radius: 2px;
+    font-weight: bold;
   }
   &.right {
     .dealer {
       right: calc(var(--playerSize) * -1.5);
     }
-    .committed, .last_action {
+    .committed {
       right: calc(var(--playerSize) * 1.25);
       text-align: right;
     }
@@ -494,21 +512,16 @@ function seatCSS(index) {
     
   }
   &.left {
-    .committed, .last_action {
+    .committed {
       left: calc(var(--playerSize) * 1.25); 
     }
   }
   &.middle {
     .cards {
       width: calc(var(--playerSize) * 3);
+      bottom: calc(var(--playerSize) * 0.1);
       .card {
         width: calc(var(--playerSize) * 1.8);
-        &.strongest {
-          transform: translateY(-50px) !important;
-          z-index: 10;
-          box-shadow: 0 0 0px 3px #d612dd;
-        }
-
       }
     }
     .profile_pic {
@@ -522,10 +535,14 @@ function seatCSS(index) {
       bottom: calc(var(--playerSize) * -1.5);
       width: calc(var(--playerSize) * 3);
     }
-    .committed, .last_action {
+    .committed {
       text-align: center;
       top: calc(var(--playerSize) * -1.7);
       left: calc(var(--playerSize) * -2.3);
+    }
+    .last_action {
+      bottom: calc(var(--playerSize) );
+      left: calc(var(--playerSize) * -3);
     }
   }
 }
@@ -560,7 +577,7 @@ function seatCSS(index) {
     </div>
   </div>
   {#each Array(state.seats.length) as _, index}
-    <div class="seat {seatClass(index, heroIndex)}" style={seatCSS(index, heroIndex)} class:active={state.activeSeatIndex == index} bind:this={seatElements[index]}>
+    <div class="seat {seatClass(index, heroIndex)}" class:winning={winningSeats.indexOf(index) !== -1} style={seatCSS(index, heroIndex)} class:active={state.activeSeatIndex == index} bind:this={seatElements[index]}>
       {#if state.seats[index]}
         {#if state.seats[index].currentChatMessage}
           <p in:fade="{{ duration: 100 }}" out:fly="{{ y: -8, duration: 650 }}" class="bubble speech">{state.seats[index].currentChatMessage}</p>
@@ -597,10 +614,11 @@ function seatCSS(index) {
         {:catch}
           Error loading player...
         {/await}
-        
-        <div class="last_action">
-          {state.seats[index].lastAction || ''}<br>
-        </div>
+        {#if state.seats[index].lastAction}
+          <div transition:fly={{y: 20}} class="last_action">
+            {state.seats[index].lastAction }
+          </div>
+        {/if}
         <div class="committed">
           {#if state.seats[index].committed > 0}
             <div out:vortex|local={{target: pot, duration: zeroIfAnimationsDisabled(300)}} class="chips">

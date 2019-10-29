@@ -220,7 +220,7 @@ export async function preload(page, session) {
 </div>
 
 <div class="main_area">
-  <Table bind:state={tableState} bind:this={table}></Table>
+  <Table bind:state={tableState} bind:this={table} bind:heroIndex={playerIndex}></Table>
   
   <div class="panel">
     <button class="btn" on:click={performToPreviousAction}>&lt; Back</button>

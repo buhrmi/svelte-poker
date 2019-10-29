@@ -4,6 +4,13 @@ A poker game written in [Svelte](https://svelte.dev).
 
 ## Progress
 
+2019-10-29
+
+- Showdown phase
+- Some initial polish
+
+![](https://i.imgur.com/feIe9pE.gif)
+
 2019-10-23
 
 - Tweaks for small devices
