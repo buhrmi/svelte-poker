@@ -25,7 +25,7 @@ async function create() {
   {withdrawals}
 {/await}
 
-<p>Current Balance: {$player.balances.BTC.toLocaleString()} Satoshi</p>
+<p>Current Balance: {$player.balances.BTC.available_balance.toLocaleString()} Satoshi</p>
 <input placeholder="Amount">
 <input placeholder="Receiver">
 <button on:click={create}>Request Withdrawal</button>

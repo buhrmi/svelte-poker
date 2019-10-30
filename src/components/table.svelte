@@ -150,7 +150,7 @@ export function startRound(round) {
   if (animations) {
     setTimeout(() => {
       state.pot += amountToAdd;
-    }, 300)
+    }, 500)
   }
   else {
     state.pot += amountToAdd;
@@ -158,7 +158,7 @@ export function startRound(round) {
 }
 
 let winningPots
-let winningSeats = []
+export let winningSeats = []
 export function playWinningAnimation(pots) {
   // Show the chips, then hide them again instantly: Let svelte do the animation as the out-transition
   state.pot = 0
@@ -216,7 +216,8 @@ export function perform(action) {
   }
 
   if (action.action == 'Check') {
-    
+    let seat = getSeatByPlayerId(action.player_id)
+    state.seats[seat].lastAction = 'Check'
   }
 
   if (action.action == 'Call') {
@@ -236,6 +237,7 @@ export function perform(action) {
 
   if (action.action == 'Shows Cards') {
     let seat = getSeatByPlayerId(action.player_id)
+    isShowDown = true
     state.seats[seat].cards = action.cards
   }
 
@@ -362,6 +364,10 @@ function seatCSS(index) {
   height: 0px;
   width: 0px;
   transition: all 0.5s;
+  &.sittingout {
+    opacity: 0.7;
+    filter: brightness(70%);
+  }
   &.active {
     .profile_pic img {
       box-shadow: 0 0 0px 2px yellow;
@@ -552,7 +558,7 @@ function seatCSS(index) {
   <div class="board">
     <div class="cards" class:showing_down={isShowDown}>
       {#each state.board as card, index}
-        <img class="card" class:strongest={strongestCards && strongestCards.indexOf(card) !== -1} in:deal="{{ seat: 0, card:index,y: -25, duration: zeroIfAnimationsDisabled(450) }}" src="/cards/{card.toLowerCase()}.png" alt={card}>
+        <img class="card" class:strongest={strongestCards && strongestCards.indexOf(card) !== -1} out:fly={{y: -30}} in:deal="{{ seat: 0, card:index,y: -25, duration: zeroIfAnimationsDisabled(450) }}" src="/cards/{card.toLowerCase()}.png" alt={card}>
       {/each}
     </div>
   </div>
@@ -577,7 +583,7 @@ function seatCSS(index) {
     </div>
   </div>
   {#each Array(state.seats.length) as _, index}
-    <div class="seat {seatClass(index, heroIndex)}" class:winning={winningSeats.indexOf(index) !== -1} style={seatCSS(index, heroIndex)} class:active={state.activeSeatIndex == index} bind:this={seatElements[index]}>
+    <div class="seat seat_{index} {seatClass(index, heroIndex)}" class:sittingout={state.seats[index] && !state.seats[index].sitting_in} class:winning={winningSeats.indexOf(index) !== -1} style={seatCSS(index, heroIndex)} class:active={state.activeSeatIndex == index} bind:this={seatElements[index]}>
       {#if state.seats[index]}
         {#if state.seats[index].currentChatMessage}
           <p in:fade="{{ duration: 100 }}" out:fly="{{ y: -8, duration: 650 }}" class="bubble speech">{state.seats[index].currentChatMessage}</p>
@@ -585,11 +591,11 @@ function seatCSS(index) {
         {#if state.dealerSeat == index}
           <img class="dealer" in:receive={'dealer'} out:send={'dealer'} src="/button.png" alt="DEALER">
         {/if}
-        <!-- TODO: this is calling player.fetch a lot of times... why? -->
+
         {#if state.seats[index].cards}
           <div class="cards" class:showing_down={isShowDown}>
             {#each state.seats[index].cards as card, cardIndex}
-              <img class="card card_{cardIndex}" class:strongest={strongestCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, x: cardIndex == 0 ? -20 : 20, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(600)}}>  
+              <img class="card card_{cardIndex}" class:strongest={strongestCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, x: cardIndex == 0 ? -20 : 20, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(800)}}>  
             {/each}
           </div>
           {#if solvedHands[index]}
@@ -600,17 +606,19 @@ function seatCSS(index) {
         {/if}
       
         {#await player.fetch(state.seats[index].player_id) then player}
-          <div class="profile_pic">
-            <img src={player.profile_pic} alt={player.nick} class="pic">
-          </div>
-          <div class="detailsbox">
-            <div class="name">
-              {player.nick}
+          {#if state.seats[index]}
+            <div class="profile_pic">
+              <img src={player.profile_pic} alt={player.nick} class="pic">
             </div>
-            <div class="stack">
-              {state.seats[index].stack}
+            <div class="detailsbox">
+              <div class="name">
+                {player.nick}
+              </div>
+              <div class="stack">
+                {state.seats[index].stack}
+              </div>
             </div>
-          </div>
+          {/if}
         {:catch}
           Error loading player...
         {/await}
@@ -621,14 +629,11 @@ function seatCSS(index) {
         {/if}
         <div class="committed">
           {#if state.seats[index].committed > 0}
-            <div out:vortex|local={{target: pot, duration: zeroIfAnimationsDisabled(300)}} class="chips">
+            <div out:vortex|local={{target: pot, duration: zeroIfAnimationsDisabled(500)}} class="chips">
               <Stack seatClass={seatClass(index)} seat={state.seats[index]}></Stack>
             </div>
           {/if}
         </div>
-        {#if !state.seats[index].sitting_in}
-          <br>Sitting Out
-        {/if}
       {:else}
         <button class="empty_seat btn" on:click={() => dispatch('sitDown', index)}>Empty Seat</button>
       {/if}

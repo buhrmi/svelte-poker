@@ -29,7 +29,8 @@ export async function preload(page, session) {
   let table;
   let history = {};
   let hands = []
-
+  let tipAmount = tableData.settings.big_blind_amount
+  let handRunning = false;
   let currentRoundIndex = 0;
   let currentActionIndex = 0;
   let playerIndex;
@@ -43,13 +44,12 @@ export async function preload(page, session) {
     }
   }
   $: isPlayersTurn = playerIndex == tableState.activeSeatIndex
-  $: isPlayerSittingIn = playerIndex && tableState.seats[playerIndex].sitting_in
+  $: isPlayerSittingIn = tableState.seats[playerIndex] && tableState.seats[playerIndex].sitting_in
   let socket;
   let connecting = false;
   let connected = false;
   let wasConnected = false;
 
-  let replayingHistory = false;
   
   onMount(connect)
 
@@ -95,14 +95,18 @@ export async function preload(page, session) {
       history.rounds = history.rounds
       tableState.board = message.board
       if (message.betting_round !== 'preflop') {
+        tableState.seats.filter(n=>n).map((s) => s.lastAction = null)
         tableState.minRaiseTo = tableState.settings.big_blind_amount
       }
+    }
+
+    if (message.type == 'tip') {
+      tableState.seats[message.seat].stack -= message.amount
     }
 
     if (message.type == 'betting-round-ended') {
       tableState.activeSeatIndex = null
       tableState.pot = message.total_gathered
-      tableState.seats.filter(n=>n).map((s) => s.lastAction = null)
       tableState.seats.filter(n=>n).map((seat) => seat.committed = 0)
     }
 
@@ -118,21 +122,37 @@ export async function preload(page, session) {
       // Looks like there is a bug in svelte and reactivity does not work when setting tableState.seats directly.
       for (let i = 0; i < message.seats.length; i++) {
         const seat = message.seats[i];
-        if (!seat) continue;
+        if (!seat) {
+          // if there is nobody sitting in the tableState, remove the player when a new hand starts
+          if (tableState.seats[i]) {
+            tableState.seats[i].sitting_in = false
+            tableState.seats[i].remove_when_hand_starts = true
+          }
+          continue;
+        }
         tableState.seats[i] = Object.assign({}, tableState.seats[i], seat)
       }
     }
 
     if (message.type == 'sit-down') {
-      tableState.seats[message.seat] = {player_id: message.player_id, committed: 0, stack: 0, chips: []}
+      tableState.seats[message.seat] = {sitting_in: false, player_id: message.player_id, committed: 0, stack: 0, chips: []}
+      tableState.seats[message.seat].remove_when_hand_starts = false
     }
 
     if (message.type == 'stand-up') {
-      tableState.seats[message.seat] = null
+      if (handRunning) {
+        tableState.seats[message.seat].sitting_in = false
+        tableState.seats[message.seat].remove_when_hand_starts = true
+      }
+      else {
+        tableState.seats[message.seat] = null
+      }
+      if (message.player_id == $player.id) player.reload()
     }
 
     if (message.type == 'sit-in') {
       tableState.seats[message.seat].sitting_in = true 
+      tableState.seats[message.seat].remove_when_hand_starts = false
     }
 
     if (message.type == 'sit-out') {
@@ -141,6 +161,7 @@ export async function preload(page, session) {
 
     if (message.type == 'bring-in') {
       tableState.seats[message.seat].stack += message.amount
+      if (message.player_id == $player.id) player.reload()
     }
 
     if (message.type == 'last-hand-id') {
@@ -148,23 +169,46 @@ export async function preload(page, session) {
       hands=hands
     }
 
+    if (message.type == 'pot-object') {
+      for (let i = 0; i < message.player_wins.length; i++) {
+        const wins = message.player_wins[i];
+        const seat = table.getSeatByPlayerId(wins.player_id)
+        tableState.seats[seat].stack += wins.win_amount
+      }
+      setTimeout(function() {
+        table.playWinningAnimation([message])
+      }, 1000)
+    }
+
     if (message.type == 'hand-started') {
+      handRunning = true
       history = {rounds: []}
       hands.push(history)
       hands = hands
+      table.isShowDown = false
       tableState.pot = 0
       tableState.dealerSeat = message.dealer.seat
-      ensureHolecards(message.participants)
-    }
-
-    if (message.type == 'hand-ended') {
-      // TODO: win chips animation
-      
+      tableState.seats.filter(n=>n).map((s) => s.lastAction = null)
+      dealHiddenCards(message.participants)
     }
 
     if (message.type == 'player-secret') {
       let seat = table.getSeatByPlayerId($player.id)
       tableState.seats[seat].cards = message.secret
+    }
+
+    if (message.type == 'hand-ended') {
+      handRunning = false
+      setTimeout(function() {
+        for (let i = 0; i < tableState.seats.length; i++) {
+          const seat = tableState.seats[i];
+          if (seat && seat.remove_when_hand_starts) tableState.seats[i] = null
+        }
+        tableState.board = []
+        table.winningSeats = []
+        table.isShowDown = false
+
+      }, tableData.settings.start_hand_delay / 2) 
     }
 
     // It's partial hand history
@@ -173,6 +217,7 @@ export async function preload(page, session) {
       history = message
       hands.push(history)
       hands = hands
+      handRunning = true
       const initialTableState = {
         minRaiseTo: tableData.settings.small_blind_amount,
         settings: tableData.settings,
@@ -200,15 +245,22 @@ export async function preload(page, session) {
     }
   }
 
-  function ensureHolecards(participants) {
-    for (let i = 0; i < participants.length; i++) {
-      const p = participants[i];
-      if (!tableState.seats[p.seat].cards || tableState.seats[p.seat].cards.length == 0 ) {
+  function dealHiddenCards(participants) {
+    // First remove all cards, then set new cards in new tick, to trigger the deal animation
+    for (let i = 0; i < tableState.seats.length; i++) {
+      const seat = tableState.seats[i];
+      if (seat) seat.cards = []
+    }
+    tick().then(function(){ 
+      for (let i = 0; i < participants.length; i++) {
+        const p = participants[i];
         tableState.seats[p.seat].cards = ['?', '?']
       }
-    }
+    })
   }
-
+  function tip(amount) {
+    socket.send(JSON.stringify({msg: 'tip', amount}))
+  }
   function fold() {
     socket.send(JSON.stringify({msg: 'fold'}))
   }
@@ -226,14 +278,14 @@ export async function preload(page, session) {
   }
   async function sitDown(index) {
     await socket.send(JSON.stringify({msg: "sit-down", seat: index}))
-    await bringIn($player.balances[tableData.currency]);
+    await bringIn($player.balances[tableData.currency].available_balance);
     await sitIn();
   }
   async function sitIn() {
     return await socket.send(JSON.stringify({msg: "sit-in"}))
   }
   async function bringIn(amount) {
-    return await socket.send(JSON.stringify({msg: "bring-in", amount}))
+    await socket.send(JSON.stringify({msg: "bring-in", amount}))
   }
   function standUp() {
     socket.send(JSON.stringify({msg: "stand-up"}))
@@ -322,13 +374,14 @@ export async function preload(page, session) {
 
 <div class="main_area">
   <Table bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
-  
+
   {#if !connected}
     Connecting. please wait
   {/if}
 
   <div class="panel">
     {#if playerIndex !== null}
+      <button on:click={() => tip(tipAmount)}>Tip {tipAmount} ❤️</button>
       {#if isPlayerSittingIn}
         <button on:click={() => sitOut()}>Sit Out</button>
       {:else}
@@ -336,28 +389,25 @@ export async function preload(page, session) {
       {/if}
       <button on:click={() => standUp()}>Stand Up</button>
     {/if}
-    {#if replayingHistory}
-      <button class="btn" on:click={performToPreviousAction}>&lt; Rewind</button>
-      <button class="btn" on:click={performNextAction}>Next &gt;</button> (Round: {history.rounds[currentRoundIndex].street}, Action: {currentActionIndex})
-    {:else}
-      {#if playerIndex !== null}
-        <div class="btn {isPlayersTurn ? '' : 'disabled'} fold" on:click={() => fold()}>Fold</div>
-        {#if tableState.seats[playerIndex] && tableState.maxCommitment == tableState.seats[playerIndex].committed}
-          <div class="btn {isPlayersTurn ? '' : 'disabled'} check" on:click={() => check()}>Check</div>
-        {:else}
-          <div class="btn {isPlayersTurn ? '' : 'disabled'} call" on:click={() => call()}>Call {tableState.maxCommitment - tableState.seats[playerIndex].committed}</div>
-        {/if}
-        
-        {#if tableState.maxCommitment == 0}
-          <div class="btn {isPlayersTurn ? '' : 'disabled'} bet" on:click={() => bet(tableState.minRaiseTo)}>Bet {tableState.minRaiseTo} {#if tableState.seats[playerIndex] && tableState.minRaiseTo == tableState.seats[playerIndex].stack}(All-In){/if}</div>
-        {:else}
-          <div class="btn {isPlayersTurn ? '' : 'disabled'} raise" on:click={() => raise(tableState.minRaiseTo)}>Raise to {tableState.minRaiseTo}</div>
-        {/if}
+
+    {#if playerIndex !== null}
+      <div class="btn {isPlayersTurn ? '' : 'disabled'} fold" on:click={() => fold()}>Fold</div>
+      {#if tableState.seats[playerIndex] && tableState.maxCommitment == tableState.seats[playerIndex].committed}
+        <div class="btn {isPlayersTurn ? '' : 'disabled'} check" on:click={() => check()}>Check</div>
+      {:else}
+        <div class="btn {isPlayersTurn ? '' : 'disabled'} call" on:click={() => call()}>Call {tableState.maxCommitment - tableState.seats[playerIndex].committed}</div>
+      {/if}
+      
+      {#if tableState.maxCommitment == 0}
+        <div class="btn {isPlayersTurn ? '' : 'disabled'} bet" on:click={() => bet(tableState.minRaiseTo)}>Bet {tableState.minRaiseTo} {#if tableState.seats[playerIndex] && tableState.minRaiseTo == tableState.seats[playerIndex].stack}(All-In){/if}</div>
+      {:else}
+        <div class="btn {isPlayersTurn ? '' : 'disabled'} raise" on:click={() => raise(tableState.minRaiseTo)}>Raise to {tableState.minRaiseTo}</div>
       {/if}
     {/if}
+  
     <div class="debug">
       {#if $player.id}
-        Player: {$player.nick}, Balance {$player.balances[tableData.currency]} <button on:click={fakeDeposit}>Make fake deposit</button><br>
+        {$player.nick} | Available Balance: {$player.balances[tableData.currency].available_balance.toLocaleString()} | On Tables: {$player.balances[tableData.currency].stacks.toLocaleString()} <button on:click={fakeDeposit}>Make fake deposit</button><br>
         <!-- state: {JSON.stringify(tableState)} -->
       {:else}
         Not logged in...
