@@ -13,6 +13,8 @@ import Stack from './stack.svelte'
 // this is to render chips anywhere except on player seats
 import Chips from './chips.svelte'
 
+import Timer from './timer.svelte'
+
 const dispatch = createEventDispatcher();
 
 const [send, receive] = crossfade({
@@ -97,6 +99,18 @@ export function getSeatByPlayerId(playerId) {
   }
 }
 
+let timerProgress = 0
+
+function updateTimer() {
+  requestAnimationFrame(updateTimer)
+  if (!state.actionStarted || !state.actionTimeout) return
+  const now = new Date().getTime()
+  const start = state.actionStarted;
+  const end = state.actionTimeout
+  timerProgress = 100 * (now - start) / (end - start)
+}
+onMount(() => requestAnimationFrame(updateTimer))
+
 // let playersSeatIndex;
 // $: {
 //   for (let index = 0; index < state.seats.length; index++) {
@@ -136,6 +150,7 @@ $: {
 }
 
 // round is a handhistory.org round object
+// this is only called by the hand replayer, not live play.
 export function startRound(round) {
   if (round.cards && round.cards.length > 0) state.board = state.board.concat(round.cards)
   state.seats.filter(n=>n).map((seat) => seat.lastAction = null)
@@ -145,7 +160,7 @@ export function startRound(round) {
     seat.chips = []
     seat.committed = 0;
   })
-  isShowDown = round.street == 'showdown'
+
   state.minRaiseTo = state.big_blind_amount
   if (animations) {
     setTimeout(() => {
@@ -303,7 +318,7 @@ function seatCSS(index) {
   @media (max-width: 800px) { @content; }
 }
 
-.table {
+.table {  
   background-image: url('/felt.png');
   color: white;
   height: 100%;
@@ -381,6 +396,10 @@ function seatCSS(index) {
       box-shadow: 0 0 33px 15px white;
     }
   }
+  .timer {
+    mix-blend-mode: screen;
+    z-index: 3;
+  }
   .btn.empty_seat {
     position: absolute;
     top: 0;
@@ -448,7 +467,7 @@ function seatCSS(index) {
     width: calc(var(--playerSize) * 2);
     height: calc(var(--playerSize));
     background: rgba(0, 0, 0, 0.8);
-    z-index: 2;
+    z-index: 4;
     transform: translate(-50%, 0);
     border-radius: 10px;
     text-align: center;
@@ -462,11 +481,10 @@ function seatCSS(index) {
       width: calc(var(--playerSize) / 1.6);
     }
   }
-  .profile_pic {
+  .profile_pic, .timer {
     position: absolute;
     // transform: translate(-50%, -50%);
     transition: all 0.3s;
-    z-index: 0;
     width: calc(var(--playerSize) * 2);
     height: calc(var(--playerSize) * 2);
     transform: translate(-50%, 0);
@@ -481,7 +499,7 @@ function seatCSS(index) {
   .dealer {
     width: calc(var(--playerSize) / 1.5);
     position: absolute;
-    z-index: 3;
+    z-index: 5;
     box-shadow: 0 0 4px -2px rgba(0,0,0,0.8);
     border-radius: 10px;
     top: calc(var(--playerSize) / 1.5);
@@ -511,11 +529,15 @@ function seatCSS(index) {
     }
     
   }
-  &.left, &.middle {
+  &.left {
     .dealer {
       left: calc(var(--playerSize) * -1.5);
     }
-    
+  }
+  &.middle {
+    .dealer {
+      left: calc(var(--playerSize) * -4.7);
+    }
   }
   &.left {
     .committed {
@@ -530,7 +552,7 @@ function seatCSS(index) {
         width: calc(var(--playerSize) * 1.8);
       }
     }
-    .profile_pic {
+    .profile_pic, .timer {
       left: calc(var(--playerSize) * -3);
       width: calc(var(--playerSize) * 2);
       height: calc(var(--playerSize) * 2);
@@ -595,7 +617,7 @@ function seatCSS(index) {
         {#if state.seats[index].cards}
           <div class="cards" class:showing_down={isShowDown}>
             {#each state.seats[index].cards as card, cardIndex}
-              <img class="card card_{cardIndex}" class:strongest={strongestCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, x: cardIndex == 0 ? -20 : 20, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(800)}}>  
+              <img class="card card_{cardIndex}" class:strongest={strongestCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(800)}}>  
             {/each}
           </div>
           {#if solvedHands[index]}
@@ -622,6 +644,11 @@ function seatCSS(index) {
         {:catch}
           Error loading player...
         {/await}
+        {#if state.activeSeatIndex == index}
+        <div class="timer">
+          <Timer progress={timerProgress}></Timer>
+        </div>
+        {/if}
         {#if state.seats[index].lastAction}
           <div transition:fly={{y: 20}} class="last_action">
             {state.seats[index].lastAction }

@@ -94,6 +94,7 @@ export async function preload(page, session) {
       tempActions = []
       history.rounds = history.rounds
       tableState.board = message.board
+      tableState.round = message.betting_round
       if (message.betting_round !== 'preflop') {
         tableState.seats.filter(n=>n).map((s) => s.lastAction = null)
         tableState.minRaiseTo = tableState.settings.big_blind_amount
@@ -106,7 +107,10 @@ export async function preload(page, session) {
 
     if (message.type == 'betting-round-ended') {
       tableState.activeSeatIndex = null
-      tableState.pot = message.total_gathered
+      setTimeout(function() {
+        tableState.pot = message.total_gathered 
+      }, 500)
+
       tableState.seats.filter(n=>n).map((seat) => seat.committed = 0)
     }
 
@@ -199,16 +203,21 @@ export async function preload(page, session) {
 
     if (message.type == 'hand-ended') {
       handRunning = false
+      // table.isShowDown = true
       setTimeout(function() {
         for (let i = 0; i < tableState.seats.length; i++) {
           const seat = tableState.seats[i];
-          if (seat && seat.remove_when_hand_starts) tableState.seats[i] = null
+
+          if (seat) {
+            if (seat.remove_when_hand_starts) tableState.seats[i] = null
+            // else seat.cards = []
+          }
         }
         tableState.board = []
         table.winningSeats = []
         table.isShowDown = false
 
-      }, tableData.settings.start_hand_delay / 2) 
+      }, tableData.settings.start_hand_delay) 
     }
 
     // It's partial hand history
@@ -346,7 +355,7 @@ export async function preload(page, session) {
 <div class="history">
   {#each hands as hand}
     <div class="hand">
-      <div class="action">--- HAND {#if hand.game_number}{hand.game_number}{/if}STARTED ---</div>
+      <div class="action">--- HAND STARTED ---</div>
     
       {#if hand && hand.rounds}
         {#each hand.rounds as round, roundIndex}
@@ -374,12 +383,12 @@ export async function preload(page, session) {
 
 <div class="main_area">
   <Table bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
-
   {#if !connected}
     Connecting. please wait
   {/if}
 
   <div class="panel">
+  <!-- {JSON.stringify(history)} -->
     {#if playerIndex !== null}
       <button on:click={() => tip(tipAmount)}>Tip {tipAmount} ❤️</button>
       {#if isPlayerSittingIn}
