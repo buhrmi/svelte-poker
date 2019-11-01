@@ -1,6 +1,10 @@
 # Svelte Poker 
 
-A poker game written in [Svelte](https://svelte.dev).
+A poker game written in [Svelte](https://svelte.dev) featuring [Standardized Hand Histories](https://hh-specs.handhistory.org)
+
+This is only the frontend part of the game. It requires a (currently proprietary) server to play.
+
+This code comes with built-in apologies for overall clumsiness. 
 
 ## Progress
 
