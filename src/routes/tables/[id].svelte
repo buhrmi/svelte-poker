@@ -13,10 +13,13 @@ export async function preload(page, session) {
 </script>
 
 <script>
+  import Dialog from '../../components/dialog.svelte'
+  import Table from '../../components/table.svelte';
+
   import { onMount, tick } from 'svelte';
   import player from '../../stores/player';
-  import Table from '../../components/table.svelte';
   import { stores } from '@sapper/app';
+
   let { session, page } = stores();
 
   export let tableData;
@@ -52,6 +55,17 @@ export async function preload(page, session) {
 
   
   onMount(connect)
+
+  onMount(function() {
+    tick().then(function() {
+      let dialog = new Dialog({
+        target: document.body,
+        intro: true
+      })
+      dialog.$on('confirm', () => dialog.$destroy())
+      dialog.$on('dismiss', () => dialog.$destroy())
+    })
+  })
 
   function connect() {
     connecting = true
@@ -173,7 +187,23 @@ export async function preload(page, session) {
       hands=hands
     }
 
+    if (message.type == 'info' || message.type == 'error') {
+      let dialog = new Dialog({
+        target: document.body,
+        intro: true,
+        props: {
+          text: message.text,
+          title: message.type
+        }
+      })
+      dialog.$on('confirm', () => dialog.$destroy())
+      dialog.$on('dismiss', () => dialog.$destroy())
+    }
+
     if (message.type == 'pot-object') {
+      if (!history.pots) history.pots = []
+      history.pots.push(message)
+      history.pots = history.pots
       for (let i = 0; i < message.player_wins.length; i++) {
         const wins = message.player_wins[i];
         const seat = table.getSeatByPlayerId(wins.player_id)
@@ -287,6 +317,7 @@ export async function preload(page, session) {
   }
   async function sitDown(index) {
     await socket.send(JSON.stringify({msg: "sit-down", seat: index}))
+    // await bringIn(100);
     await bringIn($player.balances[tableData.currency].available_balance);
     await sitIn();
   }
@@ -318,14 +349,14 @@ export async function preload(page, session) {
 .main_area {
   position: fixed;
   height: 100vh;
-  width: 75vw;
-  left: 25vw;
+  width: 100vw;
+  left: 0;
 }
 .history {
   position: fixed;
   height: 100vh;
-  width: 25vw;
-  left: 0;
+  width: 75vw;
+  left: -75vw;
   background-image: url('/wood.png');
   color: white;
   .action {
@@ -400,7 +431,7 @@ export async function preload(page, session) {
     {/if}
 
     {#if playerIndex !== null}
-      <div class="btn {isPlayersTurn ? '' : 'disabled'} fold" on:click={() => fold()}>Fold</div>
+      <div class="btn red {isPlayersTurn ? '' : 'disabled'} fold" on:click={() => fold()}>Fold</div>
       {#if tableState.seats[playerIndex] && tableState.maxCommitment == tableState.seats[playerIndex].committed}
         <div class="btn {isPlayersTurn ? '' : 'disabled'} check" on:click={() => check()}>Check</div>
       {:else}
@@ -408,9 +439,9 @@ export async function preload(page, session) {
       {/if}
       
       {#if tableState.maxCommitment == 0}
-        <div class="btn {isPlayersTurn ? '' : 'disabled'} bet" on:click={() => bet(tableState.minRaiseTo)}>Bet {tableState.minRaiseTo} {#if tableState.seats[playerIndex] && tableState.minRaiseTo == tableState.seats[playerIndex].stack}(All-In){/if}</div>
+        <div class="btn red {isPlayersTurn ? '' : 'disabled'} bet" on:click={() => bet(tableState.minRaiseTo)}>Bet {tableState.minRaiseTo} {#if tableState.seats[playerIndex] && tableState.minRaiseTo == tableState.seats[playerIndex].stack}(All-In){/if}</div>
       {:else}
-        <div class="btn {isPlayersTurn ? '' : 'disabled'} raise" on:click={() => raise(tableState.minRaiseTo)}>Raise to {tableState.minRaiseTo}</div>
+        <div class="btn red {isPlayersTurn ? '' : 'disabled'} raise" on:click={() => raise(tableState.minRaiseTo)}>Raise to {tableState.minRaiseTo}</div>
       {/if}
     {/if}
   

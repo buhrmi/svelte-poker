@@ -318,7 +318,8 @@ function seatCSS(index) {
   @media (max-width: 800px) { @content; }
 }
 
-.table {  
+.table {
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.1) 70%,rgba(0,0,0,0.3) 100%);
   background-image: url('/felt.png');
   color: white;
   height: 100%;
@@ -387,9 +388,6 @@ function seatCSS(index) {
     .profile_pic img {
       box-shadow: 0 0 0px 2px yellow;
     }
-    .detailsbox {
-      box-shadow: 0 0 0px 2px yellow;
-    }
   }
   &.winning {
     .cards {
@@ -400,7 +398,7 @@ function seatCSS(index) {
     mix-blend-mode: screen;
     z-index: 3;
   }
-  .btn.empty_seat {
+  .empty_seat {
     position: absolute;
     top: 0;
     left: 0;
@@ -466,10 +464,8 @@ function seatCSS(index) {
     position: absolute;
     width: calc(var(--playerSize) * 2);
     height: calc(var(--playerSize));
-    background: rgba(0, 0, 0, 0.8);
     z-index: 4;
     transform: translate(-50%, 0);
-    border-radius: 10px;
     text-align: center;
   }
   .committed {
@@ -574,6 +570,8 @@ function seatCSS(index) {
     }
   }
 }
+
+
 </style>
 
 <div class="table" style="--playerSize: {playerSize}px" class:callingout={strongestCards && strongestCards.length > 0}>
@@ -632,7 +630,10 @@ function seatCSS(index) {
             <div class="profile_pic">
               <img src={player.profile_pic} alt={player.nick} class="pic">
             </div>
-            <div class="detailsbox">
+            <div class="detailsbox glossy">
+              {#if state.activeSeatIndex == index}
+                <div class="glow"></div>
+              {/if}
               <div class="name">
                 {player.nick}
               </div>
@@ -662,7 +663,7 @@ function seatCSS(index) {
           {/if}
         </div>
       {:else}
-        <button class="empty_seat btn" on:click={() => dispatch('sitDown', index)}>Empty Seat</button>
+        <div class="btn alt empty_seat" on:click={() => dispatch('sitDown', index)}>Empty Seat</div>
       {/if}
     </div>
   {/each}
