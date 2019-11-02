@@ -2,7 +2,7 @@
 
 <script>
 import player from '../stores/player';
-import { fly, fade, crossfade } from 'svelte/transition';
+import { fly, fade, crossfade, scale } from 'svelte/transition';
 import { quintOut, cubicOut } from 'svelte/easing';
 import { createEventDispatcher, tick, onMount } from 'svelte';
 import { vortex } from '@/transitions'
@@ -120,11 +120,11 @@ onMount(() => requestAnimationFrame(updateTimer))
 // }
 // $: playersSeat = state.seats[playersSeatIndex]
 
-let totalCommitted;
+export let totalCommitted = 0;
 $: {
   let result = 0;
   state.seats.filter(s=>s).map(s => result += s.committed);
-  totalCommitted = result
+  totalCommitted = Math.max(totalCommitted, result)
 }
 $: {
   state.maxCommitment = 0
@@ -165,10 +165,12 @@ export function startRound(round) {
   if (animations) {
     setTimeout(() => {
       state.pot += amountToAdd;
+      totalCommitted = 0
     }, 500)
   }
   else {
     state.pot += amountToAdd;
+    totalCommitted = 0
   }
 }
 
@@ -319,8 +321,7 @@ function seatCSS(index) {
 }
 
 .table {
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.1) 70%,rgba(0,0,0,0.3) 100%);
-  background-image: url('/felt.png');
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.15) 70%,rgba(0,0,0,0.3) 100%);
   color: white;
   height: 100%;
   width: 100%;
@@ -329,6 +330,7 @@ function seatCSS(index) {
   // background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.1) 70%,rgba(0,0,0,0.3) 100%);
   .board {
     width: 55%;
+    max-width: 550px;
     position: absolute;
     left: 50%;
     top: 130px;
@@ -351,18 +353,29 @@ function seatCSS(index) {
       }
       .card {
         width: calc(20%);
+        max-width: 100px;
         transition: all 0.3s;
         transform: scale(1);
       }
     }
   }
   .pot {
-    top: 40vh;
+    top: 40%;
     width: 100%;
     text-align: center;
     font-size: 20px;
     position: absolute;
-    .committed {
+    .collected {
+      background: rgba(0,0,0,0.5);
+      border-radius: 20px;
+      display: inline-block;
+      .amount {
+        display: inline-block;
+        padding-right: 12px;
+        padding-left: 4px;
+      }
+    }
+    .total {
       text-align: center;
       font-size: 15px;
     }
@@ -582,88 +595,94 @@ function seatCSS(index) {
       {/each}
     </div>
   </div>
-  <div  class="pot">
+  <div class="pot">
     {#if winningPots}
       {#each winningPots as winningPot}
         {#each winningPot.player_wins as win}
           <div class="player_wins">
             <div out:vortex={{target: seatElements[getSeatByPlayerId(win.player_id)], duration: zeroIfAnimationsDisabled(700)}}>
-              <Chips amount={win.win_amount} width={playerSize}></Chips>
+              <Chips amount={win.win_amount} width={playerSize * 0.8}></Chips>
             </div>
           </div>
         {/each}
       {/each}
     {/if}
-    <div bind:this={pot}>
-      <Chips amount={state.pot} width={playerSize}></Chips>
-    </div>
-    {state.pot}
-    <div class="committed">
-      {totalCommitted}
-    </div>
+      <div class="collected" bind:this={pot}>
+        {#if state.pot > 0}
+          <Chips amount={state.pot} width={playerSize * 0.8}></Chips>
+          <div class="amount">{state.pot}</div>
+        {/if}
+      </div>
+    {#if totalCommitted + state.pot > 0}
+      <div class="total">
+        {totalCommitted + state.pot} 
+      </div>
+    {/if}
   </div>
   {#each Array(state.seats.length) as _, index}
     <div class="seat seat_{index} {seatClass(index, heroIndex)}" class:sittingout={state.seats[index] && !state.seats[index].sitting_in} class:winning={winningSeats.indexOf(index) !== -1} style={seatCSS(index, heroIndex)} class:active={state.activeSeatIndex == index} bind:this={seatElements[index]}>
       {#if state.seats[index]}
-        {#if state.seats[index].currentChatMessage}
-          <p in:fade="{{ duration: 100 }}" out:fly="{{ y: -8, duration: 650 }}" class="bubble speech">{state.seats[index].currentChatMessage}</p>
-        {/if}
-        {#if state.dealerSeat == index}
-          <img class="dealer" in:receive={'dealer'} out:send={'dealer'} src="/button.png" alt="DEALER">
-        {/if}
+        <div class="player" transition:scale>
+          {#if state.seats[index].currentChatMessage}
+            <p in:fade="{{ duration: 100 }}" out:fly="{{ y: -8, duration: 650 }}" class="bubble speech">{state.seats[index].currentChatMessage}</p>
+          {/if}
+          {#if state.dealerSeat == index}
+            <img class="dealer" in:receive={'dealer'} out:send={'dealer'} src="/button.png" alt="DEALER">
+          {/if}
 
-        {#if state.seats[index].cards}
-          <div class="cards" class:showing_down={isShowDown}>
-            {#each state.seats[index].cards as card, cardIndex}
-              <img class="card card_{cardIndex}" class:strongest={strongestCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(800)}}>  
-            {/each}
-          </div>
-          {#if solvedHands[index]}
-          <div transition:fly class="hand_descr">
-            {solvedHands[index].descr}
-          </div>
-          {/if}
-        {/if}
-      
-        {#await player.fetch(state.seats[index].player_id) then player}
-          {#if state.seats[index]}
-            <div class="profile_pic">
-              <img src={player.profile_pic} alt={player.nick} class="pic">
+          {#if state.seats[index].cards}
+            <div class="cards" class:showing_down={isShowDown}>
+              {#each state.seats[index].cards as card, cardIndex}
+                <img class="card card_{cardIndex}" class:strongest={strongestCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(800)}}>  
+              {/each}
             </div>
-            <div class="detailsbox glossy">
-              {#if state.activeSeatIndex == index}
-                <div class="glow"></div>
-              {/if}
-              <div class="name">
-                {player.nick}
+            {#if solvedHands[index]}
+            <div transition:fly class="hand_descr">
+              {solvedHands[index].descr}
+            </div>
+            {/if}
+          {/if}
+        
+          {#await player.fetch(state.seats[index].player_id) then player}
+            {#if state.seats[index]}
+              <div class="profile_pic">
+                <img src={player.profile_pic} alt={player.nick} class="pic">
               </div>
-              <div class="stack">
-                {state.seats[index].stack}
+              <div class="detailsbox glossy">
+                {#if state.activeSeatIndex == index}
+                  <div class="glow"></div>
+                {/if}
+                <div class="name">
+                  {player.nick}
+                </div>
+                <div class="stack">
+                  {state.seats[index].stack}
+                </div>
               </div>
-            </div>
-          {/if}
-        {:catch}
-          Error loading player...
-        {/await}
-        {#if state.activeSeatIndex == index}
-        <div class="timer">
-          <Timer progress={timerProgress}></Timer>
-        </div>
-        {/if}
-        {#if state.seats[index].lastAction}
-          <div transition:fly={{y: 20}} class="last_action">
-            {state.seats[index].lastAction }
+            {/if}
+          {:catch}
+            Error loading player...
+          {/await}
+          {#if state.activeSeatIndex == index}
+          <div class="timer">
+            <Timer progress={timerProgress}></Timer>
           </div>
-        {/if}
-        <div class="committed">
-          {#if state.seats[index].committed > 0}
-            <div out:vortex|local={{target: pot, duration: zeroIfAnimationsDisabled(500)}} class="chips">
-              <Stack seatClass={seatClass(index)} seat={state.seats[index]}></Stack>
+          {/if}
+          {#if state.seats[index].lastAction}
+            <div transition:fly={{y: 20}} class="last_action">
+              {state.seats[index].lastAction }
             </div>
           {/if}
+          <div class="committed">
+            {#if state.seats[index].committed > 0}
+              <div out:vortex|local={{target: pot, duration: zeroIfAnimationsDisabled(500)}} class="chips">
+                <Stack seatClass={seatClass(index)} seat={state.seats[index]}></Stack>
+              </div>
+            {/if}
+          </div>
         </div>
-      {:else}
-        <div class="btn alt empty_seat" on:click={() => dispatch('sitDown', index)}>Empty Seat</div>
+      {:else if typeof(heroIndex) !== 'number'}
+        <div class="btn alt empty_seat" in:scale on:click={() => dispatch('sitDown', index)}>Empty Seat</div>
       {/if}
     </div>
   {/each}

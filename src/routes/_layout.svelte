@@ -1,31 +1,11 @@
-<script context="module">
-  export async function preload(page, session) {
-    let playerData = {}
-    try {
-      const url = process.env.API_URL+'/me.json'
-      const res = await this.fetch(url, {
-        credentials: 'include',
-        headers: {
-          Authorization: session.access_token
-        }
-      })
-      playerData = await res.json()
-    }
-    catch (e) {
-      console.log(e.message)
-    }
-
-	  return { playerData }
-	}
-</script>
-
 <script>
-  export let playerData;
   export let segment;
-
+  
+  import { onMount } from 'svelte';
   import { stores } from '@sapper/app';
   import player from '../stores/player.js';
 
+  import Dialog from '../components/dialog.svelte';
   import Modal from '../components/modal.svelte';
   import Deposit from '../components/deposit.svelte';
   import Withdrawals from '../components/withdrawals.svelte';
@@ -34,55 +14,42 @@
   let {page} = stores()
   
   let hideNav = $page.query.frame;
-  $player = playerData;
   
   let { session } = stores();
+
+  onMount(async function() {
+    await player.reload()
+    if ($player.notice) {
+      const dialog = new Dialog({
+        target: document.body,
+        intro: true,
+        props: {
+          text: $player.notice
+        }
+      })
+      dialog.$on('confirm', dialog.$destroy)
+      dialog.$on('dismiss', dialog.$destroy)
+    }
+  })
 </script>
 
 
 <style lang="scss">
-// nav {
-//   height: 35px;
-//   background: #101016;
-//   background-image: url('/border.png');
-//   box-shadow: 0px 0px 5px 0px black;
-//   position: relative;
-//   z-index: 501;
-// }
-// .player {
-//   position: absolute;
-//   right: 0;
-//   top: 0;
-//   padding: 6px;
-//   z-index: 100;
-  
-//   .profile_pic {
-//     border-radius: 100px;
-//     width: 25px;
-//     height: 25px;
-//     vertical-align: middle;
-//   }
-// }
-//     .playerinfo {
-//       position: fixed;
-//       top: 0;
-//       right: 0;
-//       z-index: 10000;
-//     }
-// .menu {
-//   padding: 6px;
-// }
+.playerinfo {
+  position: absolute;
+  color: white;
+}
 </style>
 
 <slot></slot>
 
 <div class="playerinfo">
-  {#if $player.nick}
-    <!-- {$player.nick} balance: {$player.balances.BTC} -->
-    <!-- <button on:click={() => showDashboard = true}>Top Up</button>   -->
-  {:else}
-    <!-- not logged in -->
-  {/if}
+{#if $player.id}
+  {$player.nick} | Available Balance: {$player.balances['BTC'].available_balance.toLocaleString()} | On Tables: {$player.balances['BTC'].stacks.toLocaleString()}
+  <!-- state: {JSON.stringify(tableState)} -->
+{:else}
+  Not logged in...
+{/if}
 </div>
 
 {#if showDashboard}

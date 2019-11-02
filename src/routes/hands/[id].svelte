@@ -134,16 +134,15 @@ export async function preload(page, session) {
 @mixin narrow {
   @media (max-width: 800px) { @content; }
 }
-.main_area {
+.game_area {
+  background-image: url('/felt.png');
   position: fixed;
   height: 100vh;
   width: 70vw;
   left: 30vw;
   @include narrow {
-    
     width: 100vw;
     left: 0;
-    
   }
 }
 .history {
@@ -219,7 +218,7 @@ export async function preload(page, session) {
   </div>
 </div>
 
-<div class="main_area">
+<div class="game_area">
   <Table bind:state={tableState} bind:this={table} bind:heroIndex={playerIndex}></Table>
   
   <div class="panel">

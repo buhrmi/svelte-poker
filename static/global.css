@@ -36,7 +36,6 @@ a {
 	top: -1px;
 	left: 0;
 	position: absolute;
-	
 }
 .btn {
 	background: linear-gradient(to bottom, #1e6037 0%,#288a46 50%,#237f40 51%,#37c15e 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
@@ -56,12 +55,22 @@ a {
 }
 .btn.orange {
 	background: linear-gradient(to bottom, #9a8b1e 0%,#d8b52a 50%,#caab20 51%,#e8d17e 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+	border: 1px solid #fab73b;
+	box-shadow: 0 0 10px #eb9f12;
 }
 .btn.red {
 	background: linear-gradient(to bottom, #9a451e 0%,#d8532a 50%,#ca4b20 51%,#e8957e 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+	border: 1px solid #e22e2e;
+	box-shadow: 0 0 10px #bb0f0f;
 }
 .btn:hover {
 	box-shadow: 0 0 10px #55ee55;
+}
+.btn.orange:hover {
+	box-shadow: 0 0 10px #ffb429;
+}
+.btn.red:hover {
+	box-shadow: 0 0 10px #ff1515;
 }
 .btn:active {
 	top: 1px;

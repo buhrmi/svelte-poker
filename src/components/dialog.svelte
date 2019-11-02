@@ -14,7 +14,6 @@ const dispatch = createEventDispatcher()
 let lastMouseX = 0
 let lastMouseY = 0
 
-
 let dragListener;
 
 function handleDrag(e) {

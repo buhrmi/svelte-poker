@@ -19,6 +19,7 @@ export async function preload(page, session) {
   import { onMount, tick } from 'svelte';
   import player from '../../stores/player';
   import { stores } from '@sapper/app';
+  import { fly, scale } from 'svelte/transition';
 
   let { session, page } = stores();
 
@@ -55,17 +56,6 @@ export async function preload(page, session) {
 
   
   onMount(connect)
-
-  onMount(function() {
-    tick().then(function() {
-      let dialog = new Dialog({
-        target: document.body,
-        intro: true
-      })
-      dialog.$on('confirm', () => dialog.$destroy())
-      dialog.$on('dismiss', () => dialog.$destroy())
-    })
-  })
 
   function connect() {
     connecting = true
@@ -123,6 +113,7 @@ export async function preload(page, session) {
       tableState.activeSeatIndex = null
       setTimeout(function() {
         tableState.pot = message.total_gathered 
+        table.totalCommitted = 0
       }, 500)
 
       tableState.seats.filter(n=>n).map((seat) => seat.committed = 0)
@@ -346,7 +337,8 @@ export async function preload(page, session) {
 </script>
 
 <style lang="scss">
-.main_area {
+.game_area {
+  background-image: url('/felt.png');
   position: fixed;
   height: 100vh;
   width: 100vw;
@@ -378,16 +370,46 @@ export async function preload(page, session) {
 .panel {
   color: white;
   position: absolute;
-  bottom: 0;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px;
+  white-space: nowrap;
+  .inner {
+    padding: 4px;
+    background: #0d0f1a;
+    box-shadow: 1px 1px 1px black inset;
+  }
+  button {
+    height: 40px;
+    vertical-align: middle;
+  }
 }
 
+.connecting {
+  color: #ddd;
+  font-size: 20px;
+  text-align: center;  
+  padding: 7px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 10px 10px 90px rgba(0,0,0,0.6);
+  text-shadow: 0 2px 0 black;
+  .inner {
+    padding: 8px 30px;
+    background: #0d0f1a;
+    box-shadow: 1px 1px 1px black inset;
+  }
+}
 </style>
 
 <div class="history">
   {#each hands as hand}
     <div class="hand">
       <div class="action">--- HAND STARTED ---</div>
-    
+
       {#if hand && hand.rounds}
         {#each hand.rounds as round, roundIndex}
           <div class="round">
@@ -403,6 +425,7 @@ export async function preload(page, session) {
           </div>
         {/each}
       {/if}
+
       {#if hand.game_number}
         <div class="action">
           <a href="/hands/{hand.game_number}" target="_blank">REVIEW HAND</a>
@@ -412,48 +435,41 @@ export async function preload(page, session) {
   {/each}
 </div>
 
-<div class="main_area">
-  <Table bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
+<div class="game_area">
   {#if !connected}
-    Connecting. please wait
-  {/if}
-
-  <div class="panel">
-  <!-- {JSON.stringify(history)} -->
-    {#if playerIndex !== null}
-      <button on:click={() => tip(tipAmount)}>Tip {tipAmount} ❤️</button>
-      {#if isPlayerSittingIn}
-        <button on:click={() => sitOut()}>Sit Out</button>
-      {:else}
-        <button on:click={() => sitIn()}>Sit In</button>
-      {/if}
-      <button on:click={() => standUp()}>Stand Up</button>
-    {/if}
-
-    {#if playerIndex !== null}
-      <div class="btn red {isPlayersTurn ? '' : 'disabled'} fold" on:click={() => fold()}>Fold</div>
-      {#if tableState.seats[playerIndex] && tableState.maxCommitment == tableState.seats[playerIndex].committed}
-        <div class="btn {isPlayersTurn ? '' : 'disabled'} check" on:click={() => check()}>Check</div>
-      {:else}
-        <div class="btn {isPlayersTurn ? '' : 'disabled'} call" on:click={() => call()}>Call {tableState.maxCommitment - tableState.seats[playerIndex].committed}</div>
-      {/if}
-      
-      {#if tableState.maxCommitment == 0}
-        <div class="btn red {isPlayersTurn ? '' : 'disabled'} bet" on:click={() => bet(tableState.minRaiseTo)}>Bet {tableState.minRaiseTo} {#if tableState.seats[playerIndex] && tableState.minRaiseTo == tableState.seats[playerIndex].stack}(All-In){/if}</div>
-      {:else}
-        <div class="btn red {isPlayersTurn ? '' : 'disabled'} raise" on:click={() => raise(tableState.minRaiseTo)}>Raise to {tableState.minRaiseTo}</div>
-      {/if}
-    {/if}
-  
-    <div class="debug">
-      {#if $player.id}
-        {$player.nick} | Available Balance: {$player.balances[tableData.currency].available_balance.toLocaleString()} | On Tables: {$player.balances[tableData.currency].stacks.toLocaleString()} <button on:click={fakeDeposit}>Make fake deposit</button><br>
-        <!-- state: {JSON.stringify(tableState)} -->
-      {:else}
-        Not logged in...
-      {/if}
+    <div class="connecting glossy" transition:scale>
+      <div class="inner">
+        Connecting... Please wait.
+      </div>
     </div>
-  </div>
+  {:else}
+    <Table bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
+    {#if playerIndex !== null}
+      <div class="panel glossy" transition:fly={{y: 20}}>
+        <div class="inner">
+          <button on:click={() => tip(tipAmount)}>Tip {tipAmount} ❤️</button>
+          {#if isPlayerSittingIn}
+            <button on:click={() => sitOut()}>Sit Out</button>
+          {:else}
+            <button on:click={() => sitIn()}>Sit In</button>
+          {/if}
+          <button on:click={() => standUp()}>Stand Up</button>
 
+          <button class="btn red {isPlayersTurn ? '' : 'disabled'} fold" disabled={!isPlayersTurn} on:click={() => fold()}>Fold</button>
+          {#if tableState.seats[playerIndex] && tableState.maxCommitment == tableState.seats[playerIndex].committed}
+            <button class="btn {isPlayersTurn ? '' : 'disabled'} check" disabled={!isPlayersTurn} on:click={() => check()}>Check</button>
+          {:else}
+            <button class="btn {isPlayersTurn ? '' : 'disabled'} call" disabled={!isPlayersTurn} on:click={() => call()}>Call {tableState.maxCommitment - tableState.seats[playerIndex].committed}</button>
+          {/if}
+          
+          {#if tableState.maxCommitment == 0}
+            <button class="btn orange {isPlayersTurn ? '' : 'disabled'} bet" disabled={!isPlayersTurn} on:click={() => bet(tableState.minRaiseTo)}>Bet {tableState.minRaiseTo} {#if tableState.seats[playerIndex] && tableState.minRaiseTo == tableState.seats[playerIndex].stack}(All-In){/if}</button>
+          {:else}
+            <button class="btn orange {isPlayersTurn ? '' : 'disabled'} raise" disabled={!isPlayersTurn} on:click={() => raise(tableState.minRaiseTo)}>Raise to {tableState.minRaiseTo}</button>
+          {/if}
+        </div>
+      </div>
+    {/if}
+  {/if}
 </div>
 

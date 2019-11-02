@@ -26,17 +26,15 @@
 
 <style lang="scss">
 .stacks {
-  
-  .stack {  
+  display: inline-block;
+  padding: 3px;
+  .stack {
     display: inline-block;
     position: relative;
     vertical-align: top;
     .chip {
-      
-      width: 100%;
-      position: relative;
+      position: absolute;
       img {
-        position: absolute;
         width: 100%;
       }
     }
@@ -44,7 +42,7 @@
 }
 </style>
 
-<div class="stacks" style="height: {width}px">
+<div class="stacks" style="height: {width + 6}px">
   {#each Object.keys(stacks) as denomination}
     <div class="stack" style="width: {width}px">
       {#each Array(stacks[denomination]) as _, n}
