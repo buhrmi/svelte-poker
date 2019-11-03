@@ -1,13 +1,12 @@
 <script>
-	export let progress = 0;
+	export let progress = 100;
 	export let style = "fill:yellow"
-
 	
 	let x = 50
 	let y = 50
 	let r = 50
 	let startAngle
-	let endAngle = 0 ;
+	let endAngle = Math.PI/2 ;
 	let startX;
 	let startY;
 	let endX;
@@ -15,20 +14,17 @@
 	let largeArc;
 	
 	$: {	
-	 startAngle = -progress/100 * 2 * Math.PI + Math.PI/2 
-	
-	 startX = x + Math.cos(startAngle) * r
-	 startY = y - Math.sin(startAngle) * r
-	 endX = x + Math.cos(endAngle) * r
-	 endY = y - Math.sin(endAngle) * r
-	 largeArc = endAngle - startAngle <= Math.PI ? 0 : 1;
-    if (startAngle > endAngle) {
-      var s = startAngle;
-      startAngle = endAngle;
-      endAngle = s;
+	  startAngle = -progress/100 * Math.PI*2 + Math.PI/2 
+	  if (startAngle <= endAngle) {
+      startAngle += 0.001
     }
-    
-	}
+	  startX = x + Math.cos(startAngle) * r
+	  startY = y - Math.sin(startAngle) * r
+	 	
+	  endX = x + Math.cos(endAngle) * r
+	  endY = y - Math.sin(endAngle) * r
+	  largeArc = endAngle - startAngle <= Math.PI ? 0 : 1;
+  }
 </script>
 
 <style>

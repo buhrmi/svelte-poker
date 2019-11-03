@@ -155,6 +155,7 @@ export function startRound(round) {
   if (round.cards && round.cards.length > 0) state.board = state.board.concat(round.cards)
   state.seats.filter(n=>n).map((seat) => seat.lastAction = null)
   let amountToAdd = 0
+  isShowDown = round.street=='showdown'
   state.seats.filter(n=>n).map((seat) => {
     amountToAdd += seat.committed
     seat.chips = []
@@ -409,13 +410,15 @@ function seatCSS(index) {
   }
   .timer {
     mix-blend-mode: screen;
+    opacity: 0.8;
     z-index: 3;
   }
   .empty_seat {
+    padding: 6px 30px;
     position: absolute;
     top: 0;
     left: 0;
-    border-radius: 10px;
+    border-radius: 13px;
     transform: translate(-50%, -50%);
   }
   .hand_descr {
@@ -434,17 +437,6 @@ function seatCSS(index) {
     // overflow: hidden;
     z-index: 1;
     transition: all 0.3s;
-    &.showing_down {
-      transform: translate(-50%, -50%);
-      width: calc(var(--playerSize) * 2);
-      .card {
-        filter: brightness(60%);
-        width: calc(var(--playerSize) );  
-        &.strongest {
-          filter: brightness(100%);
-        }
-      }
-    }
     .card {
       width: calc(var(--playerSize) * 0.9);
       position: absolute;
@@ -454,14 +446,29 @@ function seatCSS(index) {
         transform: rotateZ(-5deg) rotateY(180deg);
         left: 0;
         &.turned {
-          transform: rotate(0);
+          transform: rotateZ(-5deg);
         }
       }
       &.card_1 {
         transform: rotateZ(12deg) rotateY(180deg);
         right: 0;
         &.turned {
-          transform: rotateZ(0);
+          transform: rotateZ(12deg);
+        }
+      }
+    }
+    &.showing_down {
+      transform: translate(-50%, -50%);
+      width: calc(var(--playerSize) * 2);
+      .card {
+        filter: brightness(60%);
+        width: calc(var(--playerSize) );
+        &.turned {
+          transform: rotateY(0);
+        }
+        &.strongest {
+          box-shadow: 0 0 53px 6px white;
+          filter: brightness(100%);
         }
       }
     }
@@ -480,6 +487,7 @@ function seatCSS(index) {
     z-index: 4;
     transform: translate(-50%, 0);
     text-align: center;
+    box-shadow: 2px 3px 12px rgba(0,0,0,0.6);
   }
   .committed {
     position: absolute;
@@ -545,6 +553,7 @@ function seatCSS(index) {
   }
   &.middle {
     .dealer {
+      bottom: -10px;
       left: calc(var(--playerSize) * -4.7);
     }
   }
@@ -633,7 +642,7 @@ function seatCSS(index) {
           {#if state.seats[index].cards}
             <div class="cards" class:showing_down={isShowDown}>
               {#each state.seats[index].cards as card, cardIndex}
-                <img class="card card_{cardIndex}" class:strongest={strongestCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{y: -60, duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(800)}}>  
+                <img class="card card_{cardIndex}" class:strongest={strongestCards.indexOf(card) !== -1} class:turned={card !== '?'} alt="?" src="/cards/{card == '?' ? 'back' : card.toLowerCase()}.png" out:fly={{duration: zeroIfAnimationsDisabled(600)}} in:deal|local={{rotate: cardIndex == 0 ? -5 : 12, card: cardIndex, seat: index, duration: zeroIfAnimationsDisabled(800)}}>  
               {/each}
             </div>
             {#if solvedHands[index]}

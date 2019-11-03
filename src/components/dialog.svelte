@@ -95,7 +95,9 @@ function dragEnd(e) {
 		margin-top: 24px;
 		text-align: center;
 	}
-
+  .btn {
+    padding: 8px 30px;
+  }
 </style>
 
 

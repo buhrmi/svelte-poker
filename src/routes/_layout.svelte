@@ -37,23 +37,19 @@
 <style lang="scss">
 .playerinfo {
   position: absolute;
+  right: 0;
   color: white;
 }
+
+
 </style>
 
-<slot></slot>
+  
+  <slot></slot>
 
-<div class="playerinfo">
 {#if $player.id}
-  {$player.nick} | Available Balance: {$player.balances['BTC'].available_balance.toLocaleString()} | On Tables: {$player.balances['BTC'].stacks.toLocaleString()}
-  <!-- state: {JSON.stringify(tableState)} -->
-{:else}
-  Not logged in...
-{/if}
-</div>
-
-{#if showDashboard}
-	<!-- <Modal on:close="{() => showDashboard = false}">
-    <Deposit></Deposit>
-	</Modal> -->
+  <div class="playerinfo">
+    {$player.nick} | Available Balance: {$player.balances['BTC'].available_balance.toLocaleString()} | On Tables: {$player.balances['BTC'].stacks.toLocaleString()}
+    <!-- state: {JSON.stringify(tableState)} -->
+  </div>
 {/if}

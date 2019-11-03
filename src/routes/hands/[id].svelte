@@ -17,6 +17,8 @@ export async function preload(page, session) {
   import { writable } from 'svelte/store'
   import player from '../../stores/player';
   import Table from '../../components/table.svelte';
+  import SplitLayout from '../../components/split_layout.svelte';
+  import History from '../../components/history.svelte';
   import CardString from '../../components/card_string.svelte'
 
   export let history;
@@ -90,11 +92,13 @@ export async function preload(page, session) {
     }
     else if ($historyPosition.action == currentRound.actions.length) {
       $historyPosition.round++;
-      $historyPosition.action = -1;
+      $historyPosition.action = -1; // -1 "means" the action of the dealer dealing new cards
       table.startRound(history.rounds[$historyPosition.round]);
     }
     else {
-      table.perform(history.rounds[$historyPosition.round].actions[$historyPosition.action]);
+      const action = history.rounds[$historyPosition.round].actions[$historyPosition.action]
+      if (action) table.perform(action);
+      else $historyPosition.action --; // too far. go back
     }
 
   }
@@ -131,103 +135,24 @@ export async function preload(page, session) {
 </script>
 
 <style lang="scss">
-@mixin narrow {
-  @media (max-width: 800px) { @content; }
-}
-.game_area {
-  background-image: url('/felt.png');
-  position: fixed;
-  height: 100vh;
-  width: 70vw;
-  left: 30vw;
-  @include narrow {
-    width: 100vw;
-    left: 0;
+  button {
+    height: 40px;
+    width: 120px;
+    vertical-align: middle;
   }
-}
-.history {
-  position: fixed;
-  height: 100vh;
-  width: 30vw;
-  left: 0;
-  background-image: url('/wood.png');
-  color: white;
-  @include narrow {
-    display: none;
-  }
-  overflow-y: auto;
-  .pots {
-    padding-left: 16px;
-  }
-  .action {
-    padding: 2px;
-    padding-left: 16px;
-    position: relative;
-    cursor: pointer;
-    &:hover {
-      background-color: rgba(255,255,255,0.1);
-    }
-    &.active:before {
-      content: '▶';
-      position: absolute;
-      left: 0px;
-    }
-  }
-}
-.panel {
-  z-index: 10;
-  background: url('/wood.png');
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  text-align: center;
-  height: 10%;
-  .btn {
-    width: 40%;
-    height: 100%;
-  }
-}
 
 </style>
 
-<div class="history">
-  {#each history.rounds as round, roundIndex}
-    <div class="round">
-      <div on:click={() => {performTo(roundIndex, -1)}} class="action" class:active={$historyPosition.round == roundIndex && $historyPosition.action == -1}>*** {round.street == 'preflop' ? 'HOLE CARDS' : round.street.toUpperCase()} *** <CardString cards={round.cards}></CardString></div>
-      {#each round.actions as action, actionIndex}
-        <div on:click={() => {performTo(roundIndex, actionIndex)}} class="action" class:active={$historyPosition.round == roundIndex && $historyPosition.action == actionIndex}>
-          {#await player.fetch(action.player_id)}loading...{:then player}{player.nick}{/await}
-          {action.action} {action.amount ? action.amount : ''}
-          {#if action.cards}
-            <CardString cards={action.cards}></CardString>
-          {/if}
-        </div>
-      {/each}
-    </div>
-  {/each}
-  <div class="pots">
-    {#each history.pots as pot}
-      {#each pot.player_wins as win}
-        {#if win.win_amount > 0}
-          <div class="winnings">
-            {#await player.fetch(win.player_id)}loading...{:then player}{player.nick} wins {win.win_amount}{/await}
-          </div>
-        {/if}
-      {/each}
-    {/each}
-  </div>
-</div>
 
-<div class="game_area">
+<SplitLayout>
+  <div slot="left">
+    <History on:jump={(e) => performTo(e.detail.roundIndex, e.detail.actionIndex)} history={history} position={historyPosition}></History>
+  </div>
+
   <Table bind:state={tableState} bind:this={table} bind:heroIndex={playerIndex}></Table>
   
-  <div class="panel">
+  <div slot="controls">
     <button class="btn" on:click={performToPreviousAction}>&lt; Back</button>
     <button class="btn" on:click={performNextAction}>Next &gt;</button>
-    <div class="debug">
-      <!-- Player: {$player.nick}<br> -->
-      <!-- state: {JSON.stringify(tableState)} -->
-    </div>
   </div>
-</div>
-
+</SplitLayout>
