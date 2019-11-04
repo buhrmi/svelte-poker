@@ -62,6 +62,8 @@ function deal(node, {rotate = 0, card, seat, duration}) {
 }
 
 export let state;
+export let tableData = {settings:{}};
+
 export let heroIndex = 1;
 export let isShowDown = false;
 let pot;
@@ -389,6 +391,14 @@ function seatCSS(index) {
     }
   }
 }
+.table_data {
+  top: 50%;
+  width: 100%;
+  color: #eee;
+  opacity: 0.7;
+  text-align: center;
+  position: absolute;
+}
 .seat {
   position: absolute;
   height: 0px;
@@ -398,9 +408,16 @@ function seatCSS(index) {
     opacity: 0.7;
     filter: brightness(70%);
   }
+  .profile_pic {
+    background: rgba(255,255,0,0);
+    box-shadow: 0 0 20px 20px rgba(255,255,0,0);
+    transition: all 0.3s;
+  }
   &.active {
-    .profile_pic img {
-      box-shadow: 0 0 0px 2px yellow;
+    .profile_pic {
+      border-radius: 100%;
+      background: rgba(255,255,0,0.4);
+      box-shadow: 0 0 20px 20px rgba(255,255,0,0.4);
     }
   }
   &.winning {
@@ -440,7 +457,7 @@ function seatCSS(index) {
     .card {
       width: calc(var(--playerSize) * 0.9);
       position: absolute;
-      box-shadow: 0 0 2px rgba(0,0,0,0.8);
+      box-shadow: 0 0 5px rgba(0,0,0,0.6);
       transition: all 0.3s;
       &.card_0 {
         transform: rotateZ(-5deg) rotateY(180deg);
@@ -501,13 +518,11 @@ function seatCSS(index) {
   .profile_pic, .timer {
     position: absolute;
     // transform: translate(-50%, -50%);
-    transition: all 0.3s;
     width: calc(var(--playerSize) * 2);
     height: calc(var(--playerSize) * 2);
     transform: translate(-50%, 0);
     bottom: calc(var(--playerSize) / -2);
     .pic {
-      box-shadow: -1px 1px 2px rgba(0,0,0,0.5);
       border-radius: 100px;
       width: 100%;
       height: 100%;
@@ -597,6 +612,16 @@ function seatCSS(index) {
 </style>
 
 <div class="table" style="--playerSize: {playerSize}px" class:callingout={strongestCards && strongestCards.length > 0}>
+  <div class="table_data">
+    Blinds: {tableData.settings.small_blind_amount}/{tableData.settings.big_blind_amount}
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    {#if tableData.settings.ante}
+      Ante: {tableData.settings.ante}
+    {:else}
+      No Ante
+    {/if}
+    
+  </div>
   <div class="board">
     <div class="cards" class:showing_down={isShowDown}>
       {#each state.board as card, index}
@@ -665,7 +690,7 @@ function seatCSS(index) {
                   {player.nick}
                 </div>
                 <div class="stack">
-                  {state.seats[index].stack}
+                  {state.seats[index].stack.toLocaleString()}
                 </div>
               </div>
             {/if}

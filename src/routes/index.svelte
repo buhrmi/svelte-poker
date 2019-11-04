@@ -1,7 +1,6 @@
 <script context="module">
   export async function preload(page, session) {
-    const res = await this.fetch(process.env.API_URL+`/tables.json`)
-    const tables = await res.json()
+    const tables = await this.fetch(process.env.API_URL+`/tables.json`).then((res) => res.json())
     return { tables }
   }
 </script>
@@ -13,13 +12,13 @@ export let tables;
 <style>
 .lobby {
   background: url('/felt.png');
-  height: calc(100% - 35px);
+  height: 100%;
   text-align: center;
 }
 </style>
 
 <div class="lobby">
-  <h1>Welcome to Shitty Poker</h1>
+  <h1>Rock Solid Poker</h1>
 
   {#each tables as table}
     <div class="table">

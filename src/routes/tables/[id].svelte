@@ -1,13 +1,6 @@
 <script context="module">
 export async function preload(page, session) {
-  const url = process.env.API_URL + '/tables/' + page.params.id + '.json'
-  const res = await this.fetch(url, {
-    credentials: 'include',
-    headers: {
-      Authorization: session.access_token
-    }
-  })
-  let tableData = await res.json()
+  const tableData = await this.fetch(process.env.API_URL + '/tables/' + page.params.id + '.json').then((res) => res.json())
   return { tableData }
 }
 </script>
@@ -388,9 +381,16 @@ button {
   width: 120px;
   vertical-align: middle;
 }
+.name {
+  padding: 3px 8px;
+}
 </style>
 
 <SplitLayout>
+  <div slot="title">
+    {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hold'em{/if}
+  </div>
+
   <div slot="left">
     {#each hands as hand}
       <div class="hand">
@@ -408,7 +408,7 @@ button {
   </div>
 
   {#if connected}
-    <Table bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
+    <Table {tableData} bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
   {/if}
   
   <div class="tip">
@@ -444,9 +444,9 @@ button {
       {#if raiseTo >= tableState.seats[playerIndex].stack}
         <button class="btn orange {isPlayersTurn ? '' : 'disabled'} bet" disabled={!isPlayersTurn} on:click={() => bet(raiseTo)}>All-In</button>
       {:else if tableState.maxCommitment == 0}
-        <button class="btn orange {isPlayersTurn ? '' : 'disabled'} bet" disabled={!isPlayersTurn} on:click={() => bet(raiseTo)}>Bet {raiseTo}</button>
+        <button class="btn orange {isPlayersTurn ? '' : 'disabled'} bet" disabled={!isPlayersTurn} on:click={() => bet(raiseTo)}>Bet {raiseTo.toLocaleString()}</button>
       {:else}
-        <button class="btn orange {isPlayersTurn ? '' : 'disabled'} raise" disabled={!isPlayersTurn} on:click={() => raise(raiseTo)}>Raise to {raiseTo}</button>
+        <button class="btn orange {isPlayersTurn ? '' : 'disabled'} raise" disabled={!isPlayersTurn} on:click={() => raise(raiseTo)}>Raise to {raiseTo.toLocaleString()}</button>
       {/if}
     {/if}
   </div>

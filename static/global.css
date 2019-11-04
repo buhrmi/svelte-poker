@@ -11,8 +11,8 @@ body {
 }
 
 a {
-	
-	font-weight: bold;
+	color: white;
+	font-weight: normal;
 }
 
 #sapper {
@@ -51,7 +51,7 @@ a {
 	text-shadow: 0 0 18px black;
 	border: 1px solid #44cc44;
 	box-shadow: 0 0 10px #22aa22;
-	border-radius:2px;
+	border-radius: 2px;
 	cursor: pointer;
 	transition: all 0.3s;
 }
@@ -61,6 +61,11 @@ a {
 }
 .btn.alt {
 	background: linear-gradient(to bottom, #2b9b41 0%,#288c3e 50%,#22823a 51%,#226c3c 100%);
+}
+.btn.alt:active {
+	background: linear-gradient(to bottom, #2b9b41 0%,#288c3e 56%,#22823a 57%,#226c3c 100%);
+	border: 1px solid #1e6037;
+	box-shadow: 2px 8px 12px rgba(0,0,0,0.5) inset;
 }
 .btn.orange {
 	background: linear-gradient(to bottom, #9a8b1e 0%,#d8b52a 50%,#caab20 51%,#e8d17e 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */

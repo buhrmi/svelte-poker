@@ -12,7 +12,7 @@
 	let endX;
 	let endY;
 	let largeArc;
-	
+
 	$: {	
 	  startAngle = -progress/100 * Math.PI*2 + Math.PI/2 
 	  if (startAngle <= endAngle) {

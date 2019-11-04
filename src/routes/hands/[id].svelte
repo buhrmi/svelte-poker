@@ -1,14 +1,9 @@
 <script context="module">
 export async function preload(page, session) {
-  const url = process.env.API_URL + '/hands/' + page.params.id + '.json'
-  const res = await this.fetch(url, {
-    credentials: 'include',
-    headers: {
-      Authorization: session.access_token
-    }
-  })
-  let history = await res.json()
-  return { history }
+  const handData = await this.fetch(process.env.API_URL + '/hands/' + page.params.id + '.json').then((res) => res.json())
+  const tableData = await this.fetch(process.env.API_URL + '/tables/' + handData.table_id + '.json').then((res) => res.json())
+  
+  return { history: handData, tableData }
 }
 </script>
 
@@ -22,6 +17,8 @@ export async function preload(page, session) {
   import CardString from '../../components/card_string.svelte'
 
   export let history;
+  export let tableData;
+
   let table;
 
   // Build initial table state from hand history object
@@ -140,16 +137,19 @@ export async function preload(page, session) {
     width: 120px;
     vertical-align: middle;
   }
-
 </style>
 
 
 <SplitLayout>
+  <div slot="title">
+    {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hold'em{/if}
+  </div>
+
   <div slot="left">
     <History on:jump={(e) => performTo(e.detail.roundIndex, e.detail.actionIndex)} history={history} position={historyPosition}></History>
   </div>
 
-  <Table bind:state={tableState} bind:this={table} bind:heroIndex={playerIndex}></Table>
+  <Table bind:state={tableState} bind:this={table} bind:heroIndex={playerIndex} {tableData}></Table>
   
   <div slot="controls">
     <button class="btn" on:click={performToPreviousAction}>&lt; Back</button>

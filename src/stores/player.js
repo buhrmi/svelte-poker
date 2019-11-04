@@ -2,6 +2,8 @@ import {writable} from 'svelte/store';
 
 const player = writable({})
 
+// TODO: THIS IS ALL WEIRDNESS
+
 player.reload = async function(params) {
   try {
     let url = process.env.API_URL + '/me.json'
@@ -16,6 +18,7 @@ player.reload = async function(params) {
       credentials: 'include',
     })
     const json = await res.json()
+
     player.set(json);
   } 
   catch {
@@ -24,9 +27,8 @@ player.reload = async function(params) {
 }
 
 const fetchPromises = {}
-// TODO: this should be static or something...
-// Maybe this can be abstracted and return a svelte store?
-player.fetch = async function (playerId) {
+// TODO: this doesn't feel right.
+player.fetch = function (playerId) {
   if (typeof fetch == 'undefined') return
   if (fetchPromises[playerId]) return fetchPromises[playerId];
   return fetchPromises[playerId] = new Promise(function(resolve) {

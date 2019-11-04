@@ -14,25 +14,30 @@
   }
 }
 .left_frame {
-  padding: 4px;
   position: fixed;
   height: 100vh;
   width: 30vw;
   color: white;
   top: 0;
+  background: #1d1f2a;
   @include narrow {
     width: 75vw;
-    transition: left 0.3s;
     left: -75vw;
-    display: none;
+    transition: left 0.3s;
     &.shown {
-      display: initial;
       left: 0;
       box-shadow: 2px 2px 5px rgba(0,0,0,0.4);
     }
   }
+  .title {
+    padding: 4px;
+  }
   .inner {
+    height: 100%;
     overflow-y: auto;
+    padding: 4px;
+    margin: 4px 4px;
+    background: #0d0f1a;
   }
 }
 .controls {
@@ -99,7 +104,10 @@ onMount(function() {
   <div class="overlay" on:click={() => leftSideShown = false}></div>
 {/if}
 
-<div class="left_frame glossy" class:shown={leftSideShown}>
+<div class="left_frame" class:shown={leftSideShown}>
+  <div class="glossy title">
+    <slot name="title"></slot>
+  </div>
   <div bind:this={leftContent} class="inner" on:scroll={stickOrUnstick}>
     <slot name="left"></slot>
   </div>

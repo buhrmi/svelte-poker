@@ -37,10 +37,14 @@ function dragEnd(e) {
 
 </script>
 
-<style>
+<style lang="scss">
 	* {
 		box-sizing: border-box;
 	}
+
+@mixin narrow {
+  @media (max-width: 800px) { @content; }
+}
 
   .close_btn {
     right: 3px;
@@ -76,13 +80,20 @@ function dragEnd(e) {
     min-width: 326px;
 		max-width: 100%;
 		top: 50%;
-		left: 50%;
+    left: 50%;
 		position: absolute;
 		transform: translate(-50%, -50%);
 		display: inline-block;
 		margin: auto;
 		background: #1d1f2a;
 		box-shadow: 10px 10px 30px rgba(0,0,0,0.4);
+    @include narrow {
+      top: 0;
+      left: 0;
+      transform: none;
+      width: 100vw;
+      height: 100vh;
+    }
 	}
 	.content {
 		box-shadow: 1px 1px 1px black inset;
@@ -101,16 +112,17 @@ function dragEnd(e) {
 </style>
 
 
-<div class="dialog" style="top: calc(50% - {y}px);left: calc(50% - {x}px);" transition:scale>
+<!-- <div class="dialog" style="top: calc(50% - {y}px);left: calc(50% - {x}px);" transition:scale> -->
+<div class="dialog" transition:scale>
   <div class="title glossy" on:mousedown={dragStart} on:mouseup={dragEnd}>
     <div class="glow"></div>
     <div class="close_btn" on:click={()=> dispatch('dismiss')}>
       🗙
     </div>
-    {title}
+    <slot name="title">{title}</slot>
   </div>
   <div class="content">
-    {text}
+    <slot>{text}</slot>
     <div class="options">
       <div class="btn" on:click={()=> dispatch('confirm')}>
         {primaryButton}
