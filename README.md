@@ -8,7 +8,7 @@ This code comes with built-in apologies for overall clumsiness.
 
 ## License
 
-Please note that this code DOES NOT come with a license to use or redistribute. We're selling a license as part of a package that also includes access to our backend, game server, and crypto-currency integration service.
+Please note that this code DOES NOT come with a license to use or redistribute. We're selling a license as part of a package that also includes access to our backend, game server, and crypto-currency integration service. If that sounds like something you'd want, please get in touch.
 
 ## What's new?
 
