@@ -6,11 +6,15 @@ This is only the frontend part of the game. It requires a (currently proprietary
 
 This code comes with built-in apologies for overall clumsiness. 
 
-## Progress
+## License
+
+Please note that this code DOES NOT come with a license to use or redistribute. We're selling a license as part of a package that also includes access to our backend, game server, and crypto-currency integration service.
+
+## What's new?
 
 2019-11-01
 
-- Start working on a UI
+- Started to work on a better UI
 
 ![](https://i.imgur.com/NWZxD1K.png)
 
