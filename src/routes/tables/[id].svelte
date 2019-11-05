@@ -12,7 +12,7 @@ export async function preload(page, session) {
   import History from '../../components/history.svelte';
 
   import { onMount, tick } from 'svelte';
-  import player from '../../stores/player';
+  import {player} from '@/shared'
   import { stores } from '@sapper/app';
   import { fly, scale } from 'svelte/transition';
 
@@ -335,23 +335,6 @@ export async function preload(page, session) {
 
 <style lang="scss">
 
-.connecting {
-  color: #ddd;
-  font-size: 20px;
-  text-align: center;  
-  padding: 7px;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  box-shadow: 10px 10px 90px rgba(0,0,0,0.6);
-  text-shadow: 0 2px 0 black;
-  .inner {
-    padding: 8px 30px;
-    background: #0d0f1a;
-    box-shadow: 1px 1px 1px black inset;
-  }
-}
 .bet_slider {
   padding: 6px;
   padding-bottom: 0px;

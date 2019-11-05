@@ -1,7 +1,7 @@
 <script>
 import {createEventDispatcher} from 'svelte';
 import CardString from './card_string.svelte';
-import player from '../stores/player'
+import {player} from '@/shared'
 import {writable} from 'svelte/store'
 
 export let history = {rounds:[]};
@@ -35,7 +35,7 @@ const dispatch = createEventDispatcher();
     <div on:click={() => dispatch('jump', {roundIndex, actionIndex: -1})} class="action" class:active={$position.round == roundIndex && $position.action == -1}>*** {round.street == 'preflop' ? 'HOLE CARDS' : round.street.toUpperCase()} *** <CardString cards={round.cards}></CardString></div>
     {#each round.actions as action, actionIndex}
       <div on:click={() => dispatch('jump', {roundIndex, actionIndex})} class="action" class:active={$position.round == roundIndex && $position.action == actionIndex}>
-        {#await player.fetch(action.player_id)}loading...{:then player}{player.nick}{/await}
+        {#await player.fetch(action.player_id)}loading...{:then player}{player && player.nick}{/await}
         {action.action} {action.amount ? action.amount : ''}
         {#if action.cards}
           <CardString cards={action.cards}></CardString>
@@ -50,7 +50,7 @@ const dispatch = createEventDispatcher();
     {#each pot.player_wins as win}
       {#if win.win_amount > 0}
         <div class="winnings">
-          {#await player.fetch(win.player_id)}loading...{:then player}{player.nick} wins {win.win_amount}{/await}
+          {#await player.fetch(win.player_id)}loading...{:then player}{player && player.nick} wins {win.win_amount}{/await}
         </div>
       {/if}
     {/each}

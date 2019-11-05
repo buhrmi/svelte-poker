@@ -87,7 +87,7 @@
     {/each}
     {#if displayedCommited}
       <div class="amount" style="top: -{seat.chips.length * 4 + 20}px">
-        {displayedCommited}
+        {displayedCommited.toLocaleString()}
       </div>
     {/if}
   {/if}

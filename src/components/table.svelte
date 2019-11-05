@@ -1,7 +1,7 @@
 <svelte:options accessors={true}/>
 
 <script>
-import player from '../stores/player';
+import {player} from '@/shared';
 import { fly, fade, crossfade, scale } from 'svelte/transition';
 import { quintOut, cubicOut } from 'svelte/easing';
 import { createEventDispatcher, tick, onMount } from 'svelte';
@@ -324,7 +324,6 @@ function seatCSS(index) {
 }
 
 .table {
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.15) 70%,rgba(0,0,0,0.3) 100%);
   color: white;
   height: 100%;
   width: 100%;
@@ -412,17 +411,18 @@ function seatCSS(index) {
     background: rgba(255,255,0,0);
     box-shadow: 0 0 20px 20px rgba(255,255,0,0);
     transition: all 0.3s;
+    border-radius: 100%;
   }
   &.active {
     .profile_pic {
-      border-radius: 100%;
       background: rgba(255,255,0,0.4);
       box-shadow: 0 0 20px 20px rgba(255,255,0,0.4);
     }
   }
   &.winning {
-    .cards {
-      box-shadow: 0 0 33px 15px white;
+    .profile_pic {
+      background: rgba(255,255,255,0.6);
+      box-shadow: 0 0 33px 33px rgba(255,255,255,0.6);
     }
   }
   .timer {
@@ -475,16 +475,14 @@ function seatCSS(index) {
       }
     }
     &.showing_down {
-      transform: translate(-50%, -50%);
-      width: calc(var(--playerSize) * 2);
       .card {
         filter: brightness(60%);
-        width: calc(var(--playerSize) );
         &.turned {
           transform: rotateY(0);
         }
         &.strongest {
           box-shadow: 0 0 53px 6px white;
+          transform: translateY(-10%);
           filter: brightness(100%);
         }
       }
@@ -522,11 +520,10 @@ function seatCSS(index) {
     height: calc(var(--playerSize) * 2);
     transform: translate(-50%, 0);
     bottom: calc(var(--playerSize) / -2);
-    .pic {
-      border-radius: 100px;
-      width: 100%;
-      height: 100%;
-    }
+  }
+  .profile_pic .pic {
+    width: 100%;
+    height: 100%;
   }
   .dealer {
     width: calc(var(--playerSize) / 1.5);
@@ -541,15 +538,29 @@ function seatCSS(index) {
     white-space: nowrap;
     bottom: calc(var(--playerSize) / 3);
     transform: translate(-50%, 0);
+    bottom: 0;
     z-index: 10;
     padding: 1px 2px;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 13px;
-    background: linear-gradient(180deg, rgba(191,224,255,1) 0%, rgba(72,168,251,1) 100%);
-    border: 1px solid rgba(0,0,0,0.3);
-    color: rgba(0,0,0,0.8);
+  	background: linear-gradient(to bottom, #1e6037 0%,#288a46 50%,#237f40 51%,#37c15e 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+    text-align: center;
+    display: inline-block;
+    color: white;
+    text-shadow: 0 0 18px black;
+    border: 1px solid #44cc44;
+    box-shadow: 0 0 10px #22aa22;
     border-radius: 2px;
-    font-weight: bold;
+    &.Fold {
+      background: linear-gradient(to bottom, #9a451e 0%,#d8532a 50%,#ca4b20 51%,#e8957e 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+      border: 1px solid #e22e2e;
+      box-shadow: 0 0 10px #bb0f0f;
+    }
+    &.Raise, &.Bet {
+      background: linear-gradient(to bottom, #9a8b1e 0%,#d8b52a 50%,#caab20 51%,#e8d17e 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+      border: 1px solid #fab73b;
+      box-shadow: 0 0 10px #eb9f12;
+    }
   }
   &.right {
     .dealer {
@@ -602,7 +613,7 @@ function seatCSS(index) {
       left: calc(var(--playerSize) * -2.3);
     }
     .last_action {
-      bottom: calc(var(--playerSize) );
+      bottom: -19px;
       left: calc(var(--playerSize) * -3);
     }
   }
@@ -644,12 +655,12 @@ function seatCSS(index) {
       <div class="collected" bind:this={pot}>
         {#if state.pot > 0}
           <Chips amount={state.pot} width={playerSize * 0.8}></Chips>
-          <div class="amount">{state.pot}</div>
+          <div class="amount">{state.pot.toLocaleString()}</div>
         {/if}
       </div>
     {#if totalCommitted + state.pot > 0}
       <div class="total">
-        {totalCommitted + state.pot} 
+        {(totalCommitted + state.pot).toLocaleString()} 
       </div>
     {/if}
   </div>
@@ -703,7 +714,7 @@ function seatCSS(index) {
           </div>
           {/if}
           {#if state.seats[index].lastAction}
-            <div transition:fly={{y: 20}} class="last_action">
+            <div transition:fly={{y: 20}} class="last_action {state.seats[index].lastAction}">
               {state.seats[index].lastAction }
             </div>
           {/if}

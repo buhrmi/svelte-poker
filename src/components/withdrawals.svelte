@@ -1,6 +1,6 @@
 <script>
 import { onDestroy, getContext } from 'svelte';
-import player from '../stores/player.js';
+import {player} from '@/shared';
 let promise = fetchWithdrawals()
 async function fetchWithdrawals() {
   let url = process.env.API_URL+'/withdrawals.json'

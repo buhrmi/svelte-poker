@@ -4,15 +4,18 @@
 }
 body {
 	font-family: Roboto, -apple-system, BlinkMacSystemFont, Segoe UI, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+	background-image: url('/felt.png');
 	font-size: 14px;
 	width: 100vw;
 	height: 100%;
 	overflow: hidden;
 }
 
-a {
+a, span.link {
+	text-decoration: underline;
 	color: white;
 	font-weight: normal;
+	cursor: pointer;
 }
 
 #sapper {

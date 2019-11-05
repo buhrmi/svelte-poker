@@ -1,7 +1,7 @@
 <script>
 
   import Chips from '../../components/chips.svelte';
-  import player from '../../stores/player';
+  import {player} from '@/shared'
   import { onDestroy, tick, onMount } from 'svelte';
   import { stores } from '@sapper/app';
   import { fly, fade } from 'svelte/transition';

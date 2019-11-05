@@ -10,7 +10,7 @@ export async function preload(page, session) {
 <script>
   import { onMount, tick } from 'svelte';
   import { writable } from 'svelte/store'
-  import player from '../../stores/player';
+  import {player} from '@/shared'
   import Table from '../../components/table.svelte';
   import SplitLayout from '../../components/split_layout.svelte';
   import History from '../../components/history.svelte';

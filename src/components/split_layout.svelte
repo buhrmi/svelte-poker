@@ -3,7 +3,7 @@
   @media (max-width: 800px) { @content; }
 }
 .main_frame {
-  background-image: url('/felt.png');
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.15) 70%,rgba(0,0,0,0.3) 100%);
   position: fixed;
   height: 100vh;
   width: 70vw;

@@ -1,7 +1,16 @@
+<svelte:options accessors/>
+
+<script context="module">
+  import {writable} from 'svelte/store'
+  export const activeEl = writable();
+</script>
+
 <script>
-import {createEventDispatcher} from 'svelte';
+import {createEventDispatcher, onMount} from 'svelte';
 import {scale} from 'svelte/transition'
 
+// If component is given, it will use it as the dialog's content
+export let component
 export let primaryButton = 'OK'
 export let title = 'Notice'
 export let text = 'Hello World'
@@ -11,10 +20,14 @@ export let y = 0
 
 const dispatch = createEventDispatcher()
 
+
+let el;
 let lastMouseX = 0
 let lastMouseY = 0
 
 let dragListener;
+
+onMount(() => $activeEl = el)
 
 function handleDrag(e) {
   x += lastMouseX - e.clientX;
@@ -24,7 +37,6 @@ function handleDrag(e) {
 }
 
 function dragStart(e) {
-  console.log(e)
   lastMouseX = e.clientX;
   lastMouseY = e.clientY;
 
@@ -47,8 +59,8 @@ function dragEnd(e) {
 }
 
   .close_btn {
-    right: 3px;
-    top: 3px;
+    right: 5px;
+    top: 5px;
     padding: 3px;
     padding-top: 2px;
     position: absolute;
@@ -56,9 +68,19 @@ function dragEnd(e) {
     border-radius: 3px;
     cursor: pointer;
     color: black;
+    transition: all 0.3s;
   }
   .close_btn:hover {
     background: #9c2828;
+    box-shadow: 0 0 10px #9c2828;
+  }
+  .wrap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.4);
   }
 
 	.title {
@@ -88,8 +110,8 @@ function dragEnd(e) {
 		background: #1d1f2a;
 		box-shadow: 10px 10px 30px rgba(0,0,0,0.4);
     @include narrow {
-      top: 0;
-      left: 0;
+      top: 0 !important;
+      left: 0 !important;
       transform: none;
       width: 100vw;
       height: 100vh;
@@ -99,21 +121,23 @@ function dragEnd(e) {
 		box-shadow: 1px 1px 1px black inset;
 		background: #0d0f1a;
 		margin: 10px 6px;
-		padding: 12px 12px;
+    padding: 12px 12px;
+    height: 100%;
 		color: #eee;
 	}
 	.options {
 		margin-top: 24px;
-		text-align: center;
+    text-align: center;
+    clear: both;
 	}
   .btn {
     padding: 8px 30px;
   }
 </style>
 
-
-<!-- <div class="dialog" style="top: calc(50% - {y}px);left: calc(50% - {x}px);" transition:scale> -->
-<div class="dialog" transition:scale>
+<div class="wrap" style="{$activeEl == el ? 'z-index: 1;' : ''}">
+<div bind:this={el} on:mousedown={() => $activeEl = el} class="dialog" style="top: calc(50% - {y}px);left: calc(50% - {x}px);" transition:scale>
+<!-- <div class="dialog" transition:scale> -->
   <div class="title glossy" on:mousedown={dragStart} on:mouseup={dragEnd}>
     <div class="glow"></div>
     <div class="close_btn" on:click={()=> dispatch('dismiss')}>
@@ -122,14 +146,16 @@ function dragEnd(e) {
     <slot name="title">{title}</slot>
   </div>
   <div class="content">
-    <slot>{text}</slot>
+    {#if component}
+      <svelte:component this={component} {text}></svelte:component>
+    {:else}
+      <slot>{text}</slot>
+    {/if}
     <div class="options">
       <div class="btn" on:click={()=> dispatch('confirm')}>
         {primaryButton}
       </div>	
     </div>
   </div>
-  
-
-  <div class="options"></div>
+</div>
 </div>
