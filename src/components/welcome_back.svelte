@@ -20,6 +20,6 @@ p  {
 </p>
 
 <p>
-You can change your profile image and name in the <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings'})}>player settings</span>.
+To change your name and player image, please <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings'})}>connect with Telegram</span>.
 </p>
 

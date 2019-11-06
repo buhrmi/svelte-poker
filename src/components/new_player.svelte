@@ -2,7 +2,6 @@
 import {player, showDialog} from '@/shared'
 import PlayerSettings from './player_settings.svelte'
 
-export let text
 </script>
 
 <style>
@@ -14,7 +13,7 @@ p  {
 }
 </style>
 
-<p>
+<p> 
 {#if $player.balances.BTC.available_balance}
 <strong>Here are {$player.balances.BTC.available_balance.toLocaleString()} Satoshi on us!</strong><br>Pick a table and have fun 😊
 {/if}

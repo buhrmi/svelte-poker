@@ -4,18 +4,9 @@ import { onDestroy, onMount } from 'svelte';
 import {player} from '@/shared';
 import Dialog from './dialog.svelte'
 
-async function fakeDeposit() {
-  let url = process.env.API_URL+'/deposits'
-  const res = await fetch(url, {
-    credentials: 'include',
-    method: 'POST'
-  })
-  // const json = await res.json()
-  player.reload()
-}
-
 let interval;
 let dialog;
+let addresses = fetch(process.env.API_URL + '/addresses.json', {credentials: 'include'}).then((res) => res.json())
 
 onMount(function() {
   interval = setInterval(() => player.reload({scan_deposits: true}), 10000)
@@ -61,10 +52,12 @@ pre {
   100,000 Chips = 0.001 BTC
 </p>
 
+{#await addresses then addresses}
 <pre>
-<a target="_blank" href="bitcoin:{$player.deposit_address.BTC}">{$player.deposit_address.BTC}</a><span class="link" on:click={() => copyToClipboard($player.deposit_address.BTC)}>Copy</span>
-<img src="https://chart.googleapis.com/chart?cht=qr&chs=256x256&chld=|1&chl=bitcoin:{$player.deposit_address.BTC}" alt="{$player.deposit_address.BTC}">
+<a target="_blank" href="bitcoin:{addresses.BTC}">{addresses.BTC}</a><span class="link" on:click={() => copyToClipboard(addresses.BTC)}>Copy</span>
+<img src="https://chart.googleapis.com/chart?cht=qr&chs=256x256&chld=|1&chl=bitcoin:{addresses.BTC}" alt="{addresses.BTC}">
 </pre>
+{/await}
 
 <p>
   <b>Your Balance: {($player.balances.BTC.stacks + $player.balances.BTC.available_balance).toLocaleString()} Chips </b>

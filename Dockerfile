@@ -1,6 +1,6 @@
 FROM node:10
 
-ARG API_URL=https://test.rocksolidpoker.net
+ARG API_URL=https://api.test.rocksolidpoker.net
 ARG ENGINE_URL=wss://engine.test.rocksolidpoker.net
 
 ENV ENGINE_URL=$ENGINE_URL

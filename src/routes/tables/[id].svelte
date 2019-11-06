@@ -34,8 +34,12 @@ export async function preload(page, session) {
   let currentActionIndex = 0;
   let playerIndex;
   let showHistory = true;
+  let betSlider = 0;
   let raiseTo = tableData.settings.big_blind_amount
-  $: raiseTo = Math.max(tableState.minRaiseTo || 0, raiseTo || 0)
+  $: {
+    if (tableState.seats[playerIndex]) raiseTo = tableState.minRaiseTo + Math.round((tableState.seats[playerIndex].stack + tableState.seats[playerIndex].committed - tableState.minRaiseTo + 1) ** (betSlider / 1000) - 1)
+    else raiseTo = tableData.settings.big_blind_amount
+  }
   $: {
     playerIndex = null
     if ($player) {
@@ -67,6 +71,9 @@ export async function preload(page, session) {
         connected = $player.id
         connecting = false
       }
+      socket.onclose = () => {
+        connected = false
+      }
       socket.onmessage = (event) => handleMessage(JSON.parse(event.data))
     }
   }
@@ -97,7 +104,7 @@ export async function preload(page, session) {
       tableState.board = message.board
       tableState.round = message.betting_round
       if (message.betting_round !== 'preflop') {
-        tableState.seats.filter(n=>n).map((s) => s.lastAction = null)
+        // tableState.seats.filter(n=>n).map((s) => s.lastAction = null)
         tableState.minRaiseTo = tableState.settings.big_blind_amount
       }
     }
@@ -117,15 +124,14 @@ export async function preload(page, session) {
     }
 
     if (message.type == 'action-is-on') {
-      // Looks like there is a bug in svelte and reactivity does not work when setting tableState.seats directly.
       tableState.activeSeatIndex = message.seat
       tableState.actionStarted = new Date().getTime()
-      tableState.actionTimeout = message.time_remaining || (tableState.actionStarted + tableData.settings.player_timeout)
+      tableState.seats[message.seat].lastAction = null
+      tableState.actionTimeout = tableState.actionStarted + message.timeout
     }
 
     // It's a table state
     if (message.type == 'table-state') {
-      // Looks like there is a bug in svelte and reactivity does not work when setting tableState.seats directly.
       for (let i = 0; i < message.seats.length; i++) {
         const seat = message.seats[i];
         if (!seat) {
@@ -146,7 +152,7 @@ export async function preload(page, session) {
     }
 
     if (message.type == 'stand-up') {
-      if (handRunning) {
+      if (handRunning && message.seat !== playerIndex) {
         tableState.seats[message.seat].sitting_in = false
         tableState.seats[message.seat].remove_when_hand_starts = true
       }
@@ -228,7 +234,7 @@ export async function preload(page, session) {
 
           if (seat) {
             if (seat.remove_when_hand_starts) tableState.seats[i] = null
-            // else seat.cards = []
+            else seat.cards = []
           }
         }
         tableState.board = []
@@ -248,12 +254,12 @@ export async function preload(page, session) {
       const initialTableState = {
         minRaiseTo: tableData.settings.small_blind_amount,
         settings: tableData.settings,
-        seats: Array(history.table_size),
+        seats: tableState.seats,
         dealerSeat: message.dealer_seat
       };
       for (const player of history.players) {
         player.stack = player.starting_stack;
-        player.bet = 0;
+        player.committed = 0;
         player.player_id = player.id
         player.cards = ['?','?']
         initialTableState.seats[player.seat] = Object.assign({}, tableState.seats[player.seat], player);
@@ -299,15 +305,29 @@ export async function preload(page, session) {
   }
   function bet(amount) {
     socket.send(JSON.stringify({msg: 'bet', amount}))
+    betSlider = 0;
   }
   function raise(amount) {
     socket.send(JSON.stringify({msg: 'raise', amount}))
+    betSlider = 0;
   }
   async function sitDown(index) {
     await socket.send(JSON.stringify({msg: "sit-down", seat: index}))
     // await bringIn(100);
-    await bringIn($player.balances[tableData.currency].available_balance);
-    await sitIn();
+    // await bringIn($player.balances[tableData.currency].available_balance);
+    const minBringIn = tableData.settings.min_bring_in || tableData.settings.big_blind_amount * 50
+    if ($player.balances[tableData.currency].available_balance < minBringIn) {
+      bringInDialog = showDialog({component: BringIn, title: 'Bring in'})
+      bringInDialog.$on('confirm', async function(ev) {
+        await bringIn(ev.detail);
+        await sitIn();
+      })
+    }
+    else {
+      await bringIn(tableData.settings.min_bring_in || minBringIn);
+      await sitIn();
+    }
+
   }
   async function sitIn() {
     return await socket.send(JSON.stringify({msg: "sit-in"}))
@@ -334,7 +354,9 @@ export async function preload(page, session) {
 </script>
 
 <style lang="scss">
-
+@mixin narrow {
+  @media (max-width: 800px) { @content; }
+}
 .bet_slider {
   padding: 6px;
   padding-bottom: 0px;
@@ -352,11 +374,22 @@ export async function preload(page, session) {
   padding: 6px;
   padding-bottom: 0px;
   position: absolute;
-  right: calc(50% - 40px);
+  top: 0;
+  left: -86px;
   bottom: 110%;
   button {
     height: 24px;
     width: 75px;
+    display: block;
+    box-shadow: none;
+  }
+  @include narrow {
+    left: 50px;
+    top: -34px;
+    button {
+      
+      display: inline-block;
+    }
   }
 }
 button {
@@ -393,16 +426,16 @@ button {
   {#if connected}
     <Table {tableData} bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
   {/if}
-  
-  <div class="tip">
-    <button on:click={() => tip(tipAmount)}>Tip {tipAmount} ❤️</button>
-  </div>
 
   <div slot="controls">
     {#if !connected}
-      Connecting to Table...
+      {#if wasConnected}
+      Connection lost. Reconnecting to Table... ⏳
+      {:else}
+      Connecting to Table... ⏳
+      {/if}
     {:else if $player.id && playerIndex == null}
-      Please pick a seat 😊
+      You can pick any open seat 😊
     {:else}
       <div class="seat_buttons">
         {#if isPlayerSittingIn}
@@ -414,7 +447,7 @@ button {
       </div>
       <div class="bet_slider glossy">
         <div class="inner">
-          <input type="range" bind:value={raiseTo} min={tableState.minRaiseTo} max={tableState.seats[playerIndex].stack}>
+          <input type="range" bind:value={betSlider} min="0" max="1000">
         </div>
       </div>
       <button class="btn red {isPlayersTurn ? '' : 'disabled'} fold" disabled={!isPlayersTurn} on:click={() => fold()}>Fold</button>
@@ -424,12 +457,16 @@ button {
         <button class="btn {isPlayersTurn ? '' : 'disabled'} call" disabled={!isPlayersTurn} on:click={() => call()}>Call {tableState.maxCommitment - tableState.seats[playerIndex].committed}</button>
       {/if}
       
-      {#if raiseTo >= tableState.seats[playerIndex].stack}
-        <button class="btn orange {isPlayersTurn ? '' : 'disabled'} bet" disabled={!isPlayersTurn} on:click={() => bet(raiseTo)}>All-In</button>
-      {:else if tableState.maxCommitment == 0}
-        <button class="btn orange {isPlayersTurn ? '' : 'disabled'} bet" disabled={!isPlayersTurn} on:click={() => bet(raiseTo)}>Bet {raiseTo.toLocaleString()}</button>
+      {#if isPlayersTurn}
+        {#if raiseTo >= tableState.seats[playerIndex].stack + tableState.seats[playerIndex].committed}
+          <button class="btn orange bet" on:click={() => bet(raiseTo)}>All-In {raiseTo.toLocaleString()}</button>
+        {:else if tableState.maxCommitment == 0}
+          <button class="btn orange bet" on:click={() => bet(raiseTo)}>Bet {raiseTo.toLocaleString()}</button>
+        {:else}
+          <button class="btn orange raise" on:click={() => raise(raiseTo)}>Raise to {raiseTo.toLocaleString()}</button>
+        {/if}
       {:else}
-        <button class="btn orange {isPlayersTurn ? '' : 'disabled'} raise" disabled={!isPlayersTurn} on:click={() => raise(raiseTo)}>Raise to {raiseTo.toLocaleString()}</button>
+        <button class="btn orange disabled bet" disabled>Raise</button>
       {/if}
     {/if}
   </div>

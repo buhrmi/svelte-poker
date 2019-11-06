@@ -2,13 +2,19 @@
 
 A poker game written in [Svelte](https://svelte.dev) featuring [Standardized Hand Histories](https://hh-specs.handhistory.org)
 
-Excuse the overall clumsiness of the code. It can only improve over time.
+Excuse the overall clumsiness of the code. It will improve over time.
 
 ## License
 
-Sooo, this is a bit awkward, but this code DOES NOT come with a license to use or redistribute. Sorry. We're selling a license as part of a package that also includes access to our backend, game server, and crypto-currency integration service. If that sounds interesting to you, please visit https://rocksolid.dev and get in touch.
+You can get a license as part of a package that also includes access to our backend, game server, crypto-currency integration service, all bundled with first-hand support. If that sounds interesting to you, please visit https://rocksolid.dev and get in touch. We work for crypto.
 
 ## What's new?
+
+2019-11-05
+
+- UI work continuing
+
+![](https://i.imgur.com/VsDYY2V.gif)
 
 2019-11-01
 

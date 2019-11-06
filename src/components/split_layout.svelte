@@ -30,10 +30,11 @@
     }
   }
   .title {
+    height: 26px;
     padding: 4px;
   }
   .inner {
-    height: 100%;
+    height: calc(100% - 34px);
     overflow-y: auto;
     padding: 4px;
     margin: 4px 4px;
@@ -54,10 +55,20 @@
   }
 }
 .toggle_left {
+  cursor: pointer;
   position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 20px;
+  display: none;
+  padding-top: 3px;
+  &:hover {
+    box-shadow: 1px 1px 2px black inset;
+  }
   @include narrow {
-    bottom: 80px;
-    left: 0;
+    top: -34px;
+    left: 6px;
+    display: block;
   }
 }
 .overlay {
@@ -74,8 +85,9 @@
 
 <script>
 import {onMount} from 'svelte';
-
-let leftSideShown = true;
+import {showDialog} from '@/shared'
+import Tables from './tables.svelte';
+let leftSideShown = false;
 
 let leftContent = {}
 let sticky = true
@@ -92,8 +104,10 @@ onMount(function() {
 
 
 <div class="main_frame">
+  <span class="link" on:click={() => showDialog({component: Tables, title: 'Find a game'})}>Tables</span>
   <slot></slot>
   <div class="controls glossy">
+    <div class="toggle_left glossy" on:click={() => leftSideShown ^= true}>📜</div>
     <div class="inner">
       <slot name="controls"></slot>
     </div>
@@ -113,4 +127,3 @@ onMount(function() {
   </div>
 </div>
 
-<div class="toggle_left" on:click={() => leftSideShown ^= true}>Show History</div>

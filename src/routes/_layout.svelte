@@ -7,6 +7,7 @@ import { player, showDialog } from '@/shared';
 
 import Dialog from '../components/dialog.svelte';
 import NewPlayer from '../components/new_player.svelte';
+import PlayerSettings from '../components/player_settings.svelte';
 import WelcomeBack from '../components/welcome_back.svelte';
 import Deposit from '../components/deposit.svelte';
 import Withdrawals from '../components/withdrawals.svelte';
@@ -14,7 +15,7 @@ import Withdrawals from '../components/withdrawals.svelte';
 onMount(async function() {
   await player.reload()
   if ($player.is_new) showDialog({component: NewPlayer, title: `Welcome ${$player.nick}`})
-  else showDialog({component: WelcomeBack, title: 'Welcome Back'})
+  // else showDialog({component: WelcomeBack, title: 'Welcome Back'})
 })
 
 </script>
@@ -32,13 +33,16 @@ onMount(async function() {
 }
 .copyright {
   position: absolute;
-  bottom: 5px;
-  right: 5px;
+  bottom: 3px;
+  right: 3px;
   color: #eee;
   opacity: 0.3;
   text-align: right;
   font-size: 10px;
   @include narrow {
+    // bottom: 7px;
+    // right: 7px;
+    // opacity: 0.2;
     display: none;
   }
 }
@@ -50,7 +54,7 @@ onMount(async function() {
 
 {#if $player.id}
   <div class="playerinfo">
-    {$player.nick} • Balance: {$player.balances['BTC'].available_balance.toLocaleString()} • On Tables: {$player.balances['BTC'].stacks.toLocaleString()} <button class="btn" on:click={() => showDialog({component: Deposit, title: 'Get more chips'})}>Get more</button>
+    <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings'})}>{$player.nick}</span> • Balance: {$player.balances['BTC'].available_balance.toLocaleString()} • On Tables: {$player.balances['BTC'].stacks.toLocaleString()} <button class="btn" on:click={() => showDialog({component: Deposit, title: 'Get more chips'})}>Get more</button>
   </div>
 {/if}
 

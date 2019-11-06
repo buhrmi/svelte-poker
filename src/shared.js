@@ -43,7 +43,6 @@ if (typeof setInterval !== 'undefined') {
   setInterval(player.reload, 10000)
 }
 
-
 function showDialog(props) {    
   const dialog = new Dialog({
     target: document.body,
@@ -52,6 +51,7 @@ function showDialog(props) {
   })
   dialog.$on('confirm', dialog.$destroy)
   dialog.$on('dismiss', dialog.$destroy)
+  return dialog
 }
 
 

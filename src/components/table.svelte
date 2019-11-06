@@ -66,6 +66,15 @@ export let tableData = {settings:{}};
 
 export let heroIndex = 1;
 export let isShowDown = false;
+let totalPlayerChips;
+
+$: {
+  totalPlayerChips = 0
+   for (let index = 0; index < state.seats.length; index++) {
+    const seat = state.seats[index];
+    if (seat) totalPlayerChips += seat.stack + seat.committed
+  }
+}
 let pot;
 let seatElements = [];
 let playerSize = 36;
@@ -201,64 +210,83 @@ export function perform(action) {
 
   if (action.action == 'Deal Cards') {
     let seat = getSeatByPlayerId(action.player_id)
+    if (typeof seat !== 'number') return
     state.seats[seat].cards = action.cards
   }
 
   if (action.action == 'Post SB') {
     let seat = getSeatByPlayerId(action.player_id)
+    if (typeof seat !== 'number') return
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
+    doderp(seat, action.action, action.amount)
+    if (state.seats[seat].stack < 0) debugger
     state.seats[seat].lastAction = 'Post SB'
   }
 
   if (action.action == 'Post BB') {
     let seat = getSeatByPlayerId(action.player_id)
+    if (typeof seat !== 'number') return
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
+    doderp(seat, action.action, action.amount)
+    if (state.seats[seat].stack < 0) debugger
     state.seats[seat].lastAction = 'Post BB'
     state.minRaiseTo = 2 * action.amount
   }
 
   if (action.action == 'Fold') {
     let seat = getSeatByPlayerId(action.player_id)
+    if (typeof seat !== 'number') return
     state.seats[seat].cards = []
     state.seats[seat].lastAction = 'Fold'
   }
 
   if (action.action == 'Raise') {
     let seat = getSeatByPlayerId(action.player_id)
-    
+    if (typeof seat !== 'number') return
     // If a player faces a $50 bet and raises by $100 to $150, the amount is $150.
     state.minRaiseTo = 2 * (state.seats[seat].committed + action.amount) - state.maxCommitment
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
+    doderp(seat, action.action, action.amount)
+    if (state.seats[seat].stack < 0) debugger
     state.seats[seat].lastAction = 'Raise' 
   }
 
   if (action.action == 'Check') {
     let seat = getSeatByPlayerId(action.player_id)
+    if (typeof seat !== 'number') return
     state.seats[seat].lastAction = 'Check'
   }
 
   if (action.action == 'Call') {
     let seat = getSeatByPlayerId(action.player_id)
+    if (typeof seat !== 'number') return
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
+    doderp(seat, action.action, action.amount)
+    if (state.seats[seat].stack < 0) debugger
     state.seats[seat].lastAction = 'Call'
   }
 
   if (action.action == 'Bet') {
     let seat = getSeatByPlayerId(action.player_id)
+    if (typeof seat !== 'number') return
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
+    doderp(seat, action.action, action.amount)
+    if (state.seats[seat].stack < 0) debugger
     state.seats[seat].lastAction = 'Bet'
     state.minRaiseTo = 2 * action.amount
   }
 
   if (action.action == 'Shows Cards') {
     let seat = getSeatByPlayerId(action.player_id)
+    if (typeof seat !== 'number') return
     isShowDown = true
     state.seats[seat].cards = action.cards
+    state.seats[seat].lastAction = null
   }
 
 }
@@ -301,10 +329,10 @@ function seatCSS(index) {
     return `left: calc(${playerSize}px / 2 + 10%);top: 255px;`
   }
   else if (index == 3) {
-    return `left: calc(${playerSize}px / 2 + 10%);top: 65px;`
+    return `left: calc(${playerSize}px / 2 + 10%);top: 95px;`
   }
   else if (index == 4) {
-    return `left: calc(100% - (${playerSize}px / 2 + 10%));top: 65px;`
+    return `left: calc(100% - (${playerSize}px / 2 + 10%));top: 95px;`
   }
   else if (index == 5) {
     return `left: calc(100% - (${playerSize}px / 2 + 10%));top: 255px;`
@@ -313,6 +341,12 @@ function seatCSS(index) {
     return `left: calc(100% - (${playerSize}px / 2 + 10%));top: 366px;`
   }
 }
+
+function doderp(seat, msg, amount) {
+    if (!window.derp) window.derp = {}
+    if (!window.derp[seat]) window.derp[seat] = []
+    window.derp[seat].push(msg, amount)
+  }
 
 </script>
 
@@ -335,7 +369,7 @@ function seatCSS(index) {
     max-width: 550px;
     position: absolute;
     left: 50%;
-    top: 130px;
+    top: 140px;
     transform: translate(-50%, 0);
     .cards {
       // height: var(--playerSize) * 1.4;
@@ -497,12 +531,15 @@ function seatCSS(index) {
   }
   .detailsbox {
     position: absolute;
-    width: calc(var(--playerSize) * 2);
+    width: calc(var(--playerSize) * 2.4);
     height: calc(var(--playerSize));
     z-index: 4;
     transform: translate(-50%, 0);
     text-align: center;
     box-shadow: 2px 3px 12px rgba(0,0,0,0.6);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .committed {
     position: absolute;
@@ -549,17 +586,17 @@ function seatCSS(index) {
     color: white;
     text-shadow: 0 0 18px black;
     border: 1px solid #44cc44;
-    box-shadow: 0 0 10px #22aa22;
+    // box-shadow: 0 0 10px #22aa22;
     border-radius: 2px;
     &.Fold {
       background: linear-gradient(to bottom, #9a451e 0%,#d8532a 50%,#ca4b20 51%,#e8957e 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
       border: 1px solid #e22e2e;
-      box-shadow: 0 0 10px #bb0f0f;
+      // box-shadow: 0 0 10px #bb0f0f;
     }
     &.Raise, &.Bet {
       background: linear-gradient(to bottom, #9a8b1e 0%,#d8b52a 50%,#caab20 51%,#e8d17e 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
       border: 1px solid #fab73b;
-      box-shadow: 0 0 10px #eb9f12;
+      // box-shadow: 0 0 10px #eb9f12;
     }
   }
   &.right {
@@ -579,7 +616,7 @@ function seatCSS(index) {
   }
   &.middle {
     .dealer {
-      bottom: -10px;
+      top: calc(var(--playerSize) / 0.8);
       left: calc(var(--playerSize) * -4.7);
     }
   }
@@ -624,6 +661,7 @@ function seatCSS(index) {
 
 <div class="table" style="--playerSize: {playerSize}px" class:callingout={strongestCards && strongestCards.length > 0}>
   <div class="table_data">
+    Total Player Chips: {totalPlayerChips}
     Blinds: {tableData.settings.small_blind_amount}/{tableData.settings.big_blind_amount}
     &nbsp;&nbsp;&nbsp;&nbsp;
     {#if tableData.settings.ante}
