@@ -11,7 +11,7 @@ export async function preload(page, session) {
   import SplitLayout from '../../components/split_layout.svelte';
   import History from '../../components/history.svelte';
 
-  import { onMount, tick } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import {player} from '@/shared'
   import { stores } from '@sapper/app';
   import { fly, scale } from 'svelte/transition';
@@ -51,32 +51,50 @@ export async function preload(page, session) {
   }
   $: isPlayersTurn = playerIndex == tableState.activeSeatIndex
   $: isPlayerSittingIn = tableState.seats[playerIndex] && tableState.seats[playerIndex].sitting_in
+  
   let socket;
-  let connecting = false;
-  let connected = false;
+  let connectingTo = false;
+  let connectedTo = false;
   let wasConnected = false;
 
   $: {
-    if ($player.access_token && connected !== $player.id) {
+    // Establishing the connection inside a reactive block makes us automatically reconnect when tableData.id changes. Sapper is pretty cool, indeed.
+    let connectionString = `${process.env.ENGINE_URL}?table_id=${tableData.id}`
+    const accessToken = $player.access_token // TODO: use cookie-based auth when connectingTo the engine. dont transfer access token in player object!
+    if (accessToken) connectionString += `&access_token=${accessToken}`
+
+    if ($player.access_token && connectingTo !== tableData.id) {
       if (socket) socket.close()
-      connecting = true
-      let connectionString = `${process.env.ENGINE_URL}?table_id=${$page.params.id}`
-      const accessToken = $player.access_token // TODO: use cookie-based auth when connecting to the engine
-      if (accessToken) connectionString += `&access_token=${accessToken}`
+      
+      wasConnected = false
+      connectedTo = null
+
+      // INIT STUFF
+      if (table) table.reset({seats: Array(tableData.settings.table_size)}) // TODO: this feels awkward..
+      history = {rounds: []};
+      hands = [];
+      connectingTo = tableData.id;
       socket = new WebSocket(connectionString);
       console.log('Connecting to', connectionString)
+      
       socket.onopen = () => {
         console.log('Connected!')
         wasConnected = true
-        connected = $player.id
-        connecting = false
+        connectedTo = tableData.id
       }
+
       socket.onclose = () => {
-        connected = false
+        console.log('Connection closed!')
+        connectedTo = null
       }
+
       socket.onmessage = (event) => handleMessage(JSON.parse(event.data))
     }
   }
+
+  onDestroy(function() {
+    if (socket) socket.close()
+  })
 
   let tempActions = []
   function handleMessage(message) {
@@ -404,7 +422,7 @@ button {
 
 <SplitLayout>
   <div slot="title">
-    {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hold'em{/if}
+    ID {tableData.id} • {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hold'em{/if}
   </div>
 
   <div slot="left">
@@ -423,12 +441,12 @@ button {
     {/each}
   </div>
 
-  {#if connected}
+  {#if connectedTo}
     <Table {tableData} bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
   {/if}
 
   <div slot="controls">
-    {#if !connected}
+    {#if !connectedTo}
       {#if wasConnected}
       Connection lost. Reconnecting to Table... ⏳
       {:else}

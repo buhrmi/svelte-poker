@@ -38,13 +38,7 @@ polka() // You can also use Express
 		compression({ threshold: 0 }),
 		sirv('static', { dev }),
 		cookieParser(),
-		// setDatabaseClientForRequest,
-		// authenticate,
-		sapper.middleware({
-			session: (req, res) => ({
-				access_token: req.cookies.access_token
-			})
-		})
+		sapper.middleware()
 	)
 	.listen({port: PORT, host: HOST}, err => {
 		if (err) console.log('error', err);

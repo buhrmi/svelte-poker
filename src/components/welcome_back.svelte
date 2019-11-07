@@ -16,10 +16,9 @@ p  {
 
 <p>
 <img src={$player.profile_pic} alt="profile picture"><br>
-{text}
+{$player.nick}<br><br>
 </p>
 
 <p>
-To change your name and player image, please <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings'})}>connect with Telegram</span>.
+We have remembered you from last time. Please <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings'})}>verify your account</span> so you can access it again later.
 </p>
-

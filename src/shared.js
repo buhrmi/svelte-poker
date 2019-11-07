@@ -43,7 +43,7 @@ if (typeof setInterval !== 'undefined') {
   setInterval(player.reload, 10000)
 }
 
-function showDialog(props) {    
+function showDialog(props) {
   const dialog = new Dialog({
     target: document.body,
     intro: true,

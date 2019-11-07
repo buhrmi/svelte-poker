@@ -9,19 +9,15 @@ img {
   width: 100px;
 }
 p  {
-  text-align: center;
+  
 }
 </style>
 
+<img src={$player.profile_pic} alt="profile picture">
+
+
 <p> 
 {#if $player.balances.BTC.available_balance}
-<strong>Here are {$player.balances.BTC.available_balance.toLocaleString()} Satoshi on us!</strong><br>Pick a table and have fun 😊
+<b>Oh no, you're all out of money!</b> Suddenly, <b>buhrmi</b> shows up and gives you {$player.balances.BTC.available_balance.toLocaleString()} Satoshi. "Hope this will help you on your quest", he says.
 {/if}
-<p>
-<img src={$player.profile_pic} alt="profile picture">
 </p>
-
-<p>
-You can change your profile image and name in your <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings'})}>player settings</span>.
-</p>
-

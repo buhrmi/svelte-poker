@@ -136,26 +136,26 @@ function dragEnd(e) {
 </style>
 
 <div class="wrap" style="{$activeEl == el ? 'z-index: 1;' : ''}">
-<div bind:this={el} on:mousedown={() => $activeEl = el} class="dialog" style="top: calc(50% - {y}px);left: calc(50% - {x}px);" transition:scale>
-<!-- <div class="dialog" transition:scale> -->
-  <div class="title glossy" on:mousedown={dragStart} on:mouseup={dragEnd}>
-    <div class="glow"></div>
-    <div class="close_btn" on:click={()=> dispatch('dismiss')}>
-      🗙
+  <div bind:this={el} on:mousedown={() => $activeEl = el} class="dialog" style="top: calc(50% - {y}px);left: calc(50% - {x}px);" transition:scale>
+  <!-- <div class="dialog" transition:scale> -->
+    <div class="title glossy" on:mousedown={dragStart} on:mouseup={dragEnd}>
+      <div class="glow"></div>
+      <div class="close_btn" on:click={()=> dispatch('dismiss')}>
+        🗙
+      </div>
+      <slot name="title">{title}</slot>
     </div>
-    <slot name="title">{title}</slot>
-  </div>
-  <div class="content">
-    {#if component}
-      <svelte:component this={component} {text}></svelte:component>
-    {:else}
-      <slot>{text}</slot>
-    {/if}
-    <div class="options">
-      <div class="btn" on:click={()=> dispatch('confirm')}>
-        {primaryButton}
-      </div>	
+    <div class="content">
+      {#if component}
+        <svelte:component {dispatch} this={component} {text}></svelte:component>
+      {:else}
+        <slot>{text}</slot>
+      {/if}
+      <div class="options">
+        <div class="btn" on:click={()=> dispatch('confirm')}>
+          {primaryButton}
+        </div>	
+      </div>
     </div>
   </div>
-</div>
 </div>

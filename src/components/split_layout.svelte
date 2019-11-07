@@ -84,7 +84,7 @@
 </style>
 
 <script>
-import {onMount} from 'svelte';
+import {onMount, onDestroy} from 'svelte';
 import {showDialog} from '@/shared'
 import Tables from './tables.svelte';
 let leftSideShown = false;
@@ -95,10 +95,14 @@ function stickOrUnstick() {
   sticky = leftContent.scrollTop === (leftContent.scrollHeight - leftContent.offsetHeight)
 }
 
+let interval
 onMount(function() {
-  setInterval(function() {
+  interval = setInterval(function() {
     if (sticky) leftContent.scrollTop = leftContent.scrollHeight;
   }, 100)
+})
+onDestroy(function() {
+  clearInterval(interval)
 })
 </script>
 

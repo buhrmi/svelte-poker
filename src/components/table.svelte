@@ -98,7 +98,6 @@ function zeroIfAnimationsDisabled(time) { return animations ? time : 0 }
 export function reset(newInitialState) {
   if (newInitialState) initialState = newInitialState;
   state = Object.assign({}, defaultState, JSON.parse(JSON.stringify(initialState)));
- 
 }
 
 reset();
@@ -428,9 +427,10 @@ function doderp(seat, msg, amount) {
   top: 50%;
   width: 100%;
   color: #eee;
-  opacity: 0.7;
+  opacity: 0.5;
   text-align: center;
   position: absolute;
+  user-select: none;
 }
 .seat {
   position: absolute;
@@ -661,7 +661,6 @@ function doderp(seat, msg, amount) {
 
 <div class="table" style="--playerSize: {playerSize}px" class:callingout={strongestCards && strongestCards.length > 0}>
   <div class="table_data">
-    Total Player Chips: {totalPlayerChips}
     Blinds: {tableData.settings.small_blind_amount}/{tableData.settings.big_blind_amount}
     &nbsp;&nbsp;&nbsp;&nbsp;
     {#if tableData.settings.ante}
@@ -669,6 +668,7 @@ function doderp(seat, msg, amount) {
     {:else}
       No Ante
     {/if}
+    <br>Total Player Chips: {totalPlayerChips}
     
   </div>
   <div class="board">
