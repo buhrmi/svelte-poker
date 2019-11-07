@@ -4,10 +4,6 @@ A poker game written in [Svelte](https://svelte.dev) featuring [Standardized Han
 
 Excuse the overall clumsiness of the code. It will improve over time.
 
-## License
-
-You can get a license as part of a package that also includes access to our backend, game server, crypto-currency integration service, all bundled with first-hand support. If that sounds interesting to you, please visit https://rocksolid.dev and get in touch. We work for crypto.
-
 ## What's new?
 
 2019-11-05
