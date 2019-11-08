@@ -8,6 +8,8 @@ let interval;
 let dialog;
 let addresses = fetch(process.env.API_URL + '/addresses.json', {credentials: 'include'}).then((res) => res.json())
 
+export let requiredAmount = 0;
+
 onMount(function() {
   interval = setInterval(() => player.reload({scan_deposits: true}), 10000)
 })
@@ -41,28 +43,51 @@ pre {
   padding: 8px 5px;
   border: 1px solid #446;
 }
+.copy {
+  padding: 3px 5px;
+  display: inline-block;
+}
+table {
+  width: 100%;
+}
+th, td {
+  width: 50%;
+}
 </style>
 
 
-<h2>
-  Pricing
-</h2>
-<p>
-  100,000,000 Chips = 1 BTC<br>
-  100,000 Chips = 0.001 BTC
-</p>
+{#if requiredAmount}
+
+  <table>
+    <tr>
+      <th><h2>Required Chips</h2></th>
+      <th><h2>You have</h2></th>
+    </tr>
+    <tr>
+      <td><h1>{requiredAmount.toLocaleString()}</h1></td>
+      <td><h1>{$player.balances.BTC.available_balance}</h1></td>
+    </tr>
+  </table>
+  <p>Purchase {(requiredAmount - $player.balances.BTC.available_balance).toLocaleString()} Chips for only {(requiredAmount - $player.balances.BTC.available_balance) / 100000000} BTC!</p>
+{:else}
+  <h2>
+    Pricing
+  </h2>
+  <p>
+    100,000,000 Chips = 1 BTC<br>
+    100,000 Chips = 0.001 BTC
+  </p>
+{/if}
 
 {#await addresses then addresses}
 <pre>
-<a target="_blank" href="bitcoin:{addresses.BTC}">{addresses.BTC}</a><span class="link" on:click={() => copyToClipboard(addresses.BTC)}>Copy</span>
-<img src="https://chart.googleapis.com/chart?cht=qr&chs=256x256&chld=|1&chl=bitcoin:{addresses.BTC}" alt="{addresses.BTC}">
+<a target="_blank" href="bitcoin:{addresses.BTC}">{addresses.BTC}</a> <span class="copy btn" on:click={() => copyToClipboard(addresses.BTC)}>Copy Address</span>
 </pre>
+<p>
+<img src="https://chart.googleapis.com/chart?cht=qr&chs=200x200&chld=|1&chl=bitcoin:{addresses.BTC}" alt="{addresses.BTC}">
+</p>
 {/await}
 
 <p>
-  <b>Your Balance: {($player.balances.BTC.stacks + $player.balances.BTC.available_balance).toLocaleString()} Chips </b>
-</p>
-
-<p>
-  Waiting for deposits...
+  Your balance will automatically increase after 1 confirmation. Please leave this window open while waiting.
 </p>

@@ -18,6 +18,8 @@ export let text = 'Hello World'
 export let x = 0
 export let y = 0
 
+export let value;
+
 const dispatch = createEventDispatcher()
 
 
@@ -80,6 +82,7 @@ function dragEnd(e) {
     left: 0;
     width: 100%;
     height: 100%;
+    overflow: hidden;
     background: rgba(0,0,0,0.4);
   }
 
@@ -99,8 +102,7 @@ function dragEnd(e) {
 	}
 
 	.dialog {
-    min-width: 326px;
-		max-width: 100%;
+    width: 526px;
 		top: 50%;
     left: 50%;
 		position: absolute;
@@ -113,6 +115,7 @@ function dragEnd(e) {
       top: 0 !important;
       left: 0 !important;
       transform: none;
+      max-width: 100%;
       width: 100vw;
       height: 100vh;
     }
@@ -133,6 +136,12 @@ function dragEnd(e) {
   .btn {
     padding: 8px 30px;
   }
+  .baby {
+    position: absolute;
+    width: 21%;
+    left: 3%;
+    bottom: 30%;
+  }
 </style>
 
 <div class="wrap" style="{$activeEl == el ? 'z-index: 1;' : ''}">
@@ -140,6 +149,7 @@ function dragEnd(e) {
   <!-- <div class="dialog" transition:scale> -->
     <div class="title glossy" on:mousedown={dragStart} on:mouseup={dragEnd}>
       <div class="glow"></div>
+      <!-- <img class="baby" src="/baby1.png" alt="Baby"> -->
       <div class="close_btn" on:click={()=> dispatch('dismiss')}>
         🗙
       </div>
@@ -147,12 +157,12 @@ function dragEnd(e) {
     </div>
     <div class="content">
       {#if component}
-        <svelte:component {dispatch} this={component} {text}></svelte:component>
+        <svelte:component {dispatch} bind:value this={component} {...$$props}></svelte:component>
       {:else}
         <slot>{text}</slot>
       {/if}
       <div class="options">
-        <div class="btn" on:click={()=> dispatch('confirm')}>
+        <div class="btn" on:click={()=> dispatch('confirm', value)}>
           {primaryButton}
         </div>	
       </div>

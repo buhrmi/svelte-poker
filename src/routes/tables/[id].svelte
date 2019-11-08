@@ -10,9 +10,10 @@ export async function preload(page, session) {
   import Table from '../../components/table.svelte';
   import SplitLayout from '../../components/split_layout.svelte';
   import History from '../../components/history.svelte';
-
+  import BringIn from '../../components/bring_in.svelte'
+  import Deposit from '../../components/deposit.svelte'
   import { onMount, onDestroy, tick } from 'svelte';
-  import {player} from '@/shared'
+  import {player, showDialog} from '@/shared'
   import { stores } from '@sapper/app';
   import { fly, scale } from 'svelte/transition';
 
@@ -29,7 +30,6 @@ export async function preload(page, session) {
   let history = {rounds: []};
   let hands = []
   let tipAmount = tableData.settings.big_blind_amount
-  let handRunning = false;
   let currentRoundIndex = 0;
   let currentActionIndex = 0;
   let playerIndex;
@@ -37,7 +37,22 @@ export async function preload(page, session) {
   let betSlider = 0;
   let raiseTo = tableData.settings.big_blind_amount
   $: {
-    if (tableState.seats[playerIndex]) raiseTo = tableState.minRaiseTo + Math.round((tableState.seats[playerIndex].stack + tableState.seats[playerIndex].committed - tableState.minRaiseTo + 1) ** (betSlider / 1000) - 1)
+    // only keep the last 20 hands because rendering will be slow
+    if (hands.length > 20) {
+      hands.shift()
+      hands = hands
+    }
+  }
+  $: {
+    // Player can only go all-in
+    if (tableState.seats[playerIndex]) {
+      if (tableState.minRaiseTo > tableState.seats[playerIndex].stack + tableState.seats[playerIndex].committed) {
+        raiseTo = tableState.seats[playerIndex].stack + tableState.seats[playerIndex].committed;
+      }
+      else {
+        raiseTo = tableState.minRaiseTo + Math.round((tableState.seats[playerIndex].stack + tableState.seats[playerIndex].committed - tableState.minRaiseTo + 1) ** (betSlider / 1000) - 1)
+      }
+    }
     else raiseTo = tableData.settings.big_blind_amount
   }
   $: {
@@ -108,7 +123,6 @@ export async function preload(page, session) {
       else {
         tempActions.push(message)
       }
-      hands = hands
       table.perform(message);
     }
 
@@ -156,7 +170,7 @@ export async function preload(page, session) {
           // if there is nobody sitting in the tableState, remove the player when a new hand starts
           if (tableState.seats[i]) {
             tableState.seats[i].sitting_in = false
-            tableState.seats[i].remove_when_hand_starts = true
+            tableState.seats[i].remove_after_hand_ended = true
           }
           continue;
         }
@@ -165,14 +179,18 @@ export async function preload(page, session) {
     }
 
     if (message.type == 'sit-down') {
+      if (!tableState.handRunning) {
+        const seat = table.getSeatByPlayerId(message.player_id)
+        tableState.seats[seat] = null
+      }
       tableState.seats[message.seat] = {sitting_in: false, player_id: message.player_id, committed: 0, stack: 0, chips: []}
-      tableState.seats[message.seat].remove_when_hand_starts = false
+      tableState.seats[message.seat].remove_after_hand_ended = false
     }
 
     if (message.type == 'stand-up') {
-      if (handRunning && message.seat !== playerIndex) {
+      if (tableState.handRunning && message.seat !== playerIndex) {
         tableState.seats[message.seat].sitting_in = false
-        tableState.seats[message.seat].remove_when_hand_starts = true
+        tableState.seats[message.seat].remove_after_hand_ended = true
       }
       else {
         tableState.seats[message.seat] = null
@@ -182,7 +200,7 @@ export async function preload(page, session) {
 
     if (message.type == 'sit-in') {
       tableState.seats[message.seat].sitting_in = true 
-      tableState.seats[message.seat].remove_when_hand_starts = false
+      tableState.seats[message.seat].remove_after_hand_ended = false
     }
 
     if (message.type == 'sit-out') {
@@ -227,10 +245,10 @@ export async function preload(page, session) {
     }
 
     if (message.type == 'hand-started') {
-      handRunning = true
+      tableState.handRunning = true
       history = {rounds: []}
       hands.push(history)
-      hands = hands
+      history.game_number = message.uuid
       table.isShowDown = false
       tableState.pot = 0
       tableState.dealerSeat = message.dealer.seat
@@ -244,14 +262,15 @@ export async function preload(page, session) {
     }
 
     if (message.type == 'hand-ended') {
-      handRunning = false
+      tableState.handRunning = false
+      history.ended = true
       // table.isShowDown = true
       setTimeout(function() {
         for (let i = 0; i < tableState.seats.length; i++) {
           const seat = tableState.seats[i];
 
           if (seat) {
-            if (seat.remove_when_hand_starts) tableState.seats[i] = null
+            if (seat.remove_after_hand_ended) tableState.seats[i] = null
             else seat.cards = []
           }
         }
@@ -259,7 +278,7 @@ export async function preload(page, session) {
         table.winningSeats = []
         table.isShowDown = false
 
-      }, tableData.settings.start_hand_delay) 
+      }, tableData.settings.start_hand_delay * 0.8) 
     }
 
     // It's partial hand history
@@ -267,8 +286,7 @@ export async function preload(page, session) {
       // got partial history
       history = message
       hands.push(history)
-      hands = hands
-      handRunning = true
+      tableState.handRunning = true
       const initialTableState = {
         minRaiseTo: tableData.settings.small_blind_amount,
         settings: tableData.settings,
@@ -294,6 +312,10 @@ export async function preload(page, session) {
         }
       }
     }
+
+    // Trigger reactivity
+    history = history
+    hands=hands
   }
 
   function dealHiddenCards(participants) {
@@ -333,13 +355,14 @@ export async function preload(page, session) {
     await socket.send(JSON.stringify({msg: "sit-down", seat: index}))
     // await bringIn(100);
     // await bringIn($player.balances[tableData.currency].available_balance);
-    const minBringIn = tableData.settings.min_bring_in || tableData.settings.big_blind_amount * 50
+    const minBringIn = tableData.settings.min_bring_in
     if ($player.balances[tableData.currency].available_balance < minBringIn) {
-      bringInDialog = showDialog({component: BringIn, title: 'Bring in'})
-      bringInDialog.$on('confirm', async function(ev) {
-        await bringIn(ev.detail);
-        await sitIn();
-      })
+      showDialog({component: Deposit, title: 'Not enough chips', requiredAmount: minBringIn})
+      // const bringInDialog = showDialog({component: BringIn, title: 'Bring in', min: tableData.settings.min_bring_in})
+      // bringInDialog.$on('confirm', async function(ev) {
+      //   await bringIn(ev.detail);
+      //   await sitIn();
+      // })
     }
     else {
       await bringIn(tableData.settings.min_bring_in || minBringIn);
@@ -422,27 +445,17 @@ button {
 
 <SplitLayout>
   <div slot="title">
-    ID {tableData.id} • {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hold'em{/if}
+    #{tableData.id} • {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hold'em{/if}
   </div>
 
   <div slot="left">
-    {#each hands as hand}
-      <div class="hand">
-        <div class="action">--- HAND STARTED ---</div>
-
-        <History history={hand}></History>
-
-        {#if hand.game_number}
-          <div class="action">
-            <a href="/hands/{hand.game_number}" target="_blank">REVIEW HAND</a>
-          </div>
-        {/if}
-      </div>
+    {#each hands as hand, i (hand.game_number)}
+      <History history={hand}></History>
     {/each}
   </div>
 
   {#if connectedTo}
-    <Table {tableData} bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
+    <Table currentHand={history} {tableData} bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
   {/if}
 
   <div slot="controls">

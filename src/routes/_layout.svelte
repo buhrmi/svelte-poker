@@ -13,11 +13,13 @@ import Deposit from '../components/deposit.svelte';
 import Tables from '../components/tables.svelte';
 import Withdrawals from '../components/withdrawals.svelte';
 
+const {page} = stores()
+
 onMount(async function() {
-  await player.reload()
+  await player.reload($page.query)
   if ($player.is_new) showDialog({component: NewPlayer, title: `Welcome ${$player.nick}`})
-  else showDialog({component: WelcomeBack, title: 'Welcome Back'})
-  // showDialog({component: Tables, title: 'Pick a game', id: 'tables'})
+  // else showDialog({component: WelcomeBack, title: 'Welcome Back'})
+  showDialog({component: Tables, title: 'Pick a game', id: 'tables'})
 })
 
 </script>
@@ -60,6 +62,6 @@ onMount(async function() {
   </div>
 {/if}
 
-<div class="copyright">
+<!-- <div class="copyright">
 Copyright © 2019 <br><a target="_blank" href="https://rocksolid.dev">Rock Solid Development</a>
-</div>
+</div> -->

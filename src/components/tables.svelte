@@ -12,45 +12,36 @@
 </script>
 
 <style>
-table {
-  width: 100%;
-  border-collapse: collapse;
+a {
+  display: block;
+  margin: 6px;
+  padding: 12px;
+  border-radius: 6px;
+  text-decoration: none;
 }
-td {
-  padding: 2px;
+.name {
+  font-weight: bold;
 }
-th.number, td.number {
-  text-align: right;
-}
-tr.game:hover {
-  cursor: pointer;
-  background: rgba(255,255,255,0.2);
-}
-
 </style>
 
 {#await tables}
   Loading Tables...
 {:then tables}
   <h2>Cash Games</h2>
-  <table>
-    <tr>
-      <th></th>
-      <th></th>
-      <th class="number">Blinds</th>
-      <th class="number">Players</th>
-      <th></th>
-    </tr>
-    {#each tables as table}
-      <tr class="game">
-        <td on:click={() => gotoTable(table.id)}>{table.id}</td>
-        <td on:click={() => gotoTable(table.id)}>{table.name}</td>
-        <td class="number" on:click={() => gotoTable(table.id)}>{table.settings.small_blind_amount}/{table.settings.big_blind_amount}</td>
-        <td class="number" on:click={() => gotoTable(table.id)}>{table.settings.table_size - table.open_seats}/{table.settings.table_size}</td>
-        <td><a href="/tables/{table.id}" target="_blank"><img width="14" src="/external.png" alt="Open in new window"></a></td>
-      </tr>
-    {/each}
-  </table>
+  {#each tables as table}
+    <a href="/tables/{table.id}" class="table glossy">
+      <div class="name">{table.name}</div>
+      <div class="blinds">
+        Blinds: {table.settings.small_blind_amount}/{table.settings.big_blind_amount}
+      </div>
+      <div class="players">
+        Players: {table.settings.table_size - table.open_seats}/{table.settings.table_size}<br>
+      </div>
+      <div class="rake">
+        Rake: {table.settings.rake / 100}%
+      </div>
+    </a>
+  {/each}
 {/await}
 
 <h2>Adventure mode</h2>

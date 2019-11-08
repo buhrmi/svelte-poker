@@ -72,8 +72,9 @@ $: {
   totalPlayerChips = 0
    for (let index = 0; index < state.seats.length; index++) {
     const seat = state.seats[index];
-    if (seat) totalPlayerChips += seat.stack + seat.committed
+    if (seat) totalPlayerChips += seat.stack
   }
+  totalPlayerChips += totalCommitted + state.pot
 }
 let pot;
 let seatElements = [];
@@ -187,6 +188,8 @@ export function startRound(round) {
 
 let winningPots
 export let winningSeats = []
+export let currentHand
+
 export function playWinningAnimation(pots) {
   // Show the chips, then hide them again instantly: Let svelte do the animation as the out-transition
   state.pot = 0
@@ -231,6 +234,17 @@ export function perform(action) {
     doderp(seat, action.action, action.amount)
     if (state.seats[seat].stack < 0) debugger
     state.seats[seat].lastAction = 'Post BB'
+    state.minRaiseTo = 2 * action.amount
+  }
+
+  if (action.action == 'Post Dead') {
+    let seat = getSeatByPlayerId(action.player_id)
+    if (typeof seat !== 'number') return
+    state.seats[seat].committed += action.amount
+    state.seats[seat].stack -= action.amount
+    doderp(seat, action.action, action.amount)
+    if (state.seats[seat].stack < 0) debugger
+    state.seats[seat].lastAction = 'Post Dead'
     state.minRaiseTo = 2 * action.amount
   }
 
@@ -573,9 +587,6 @@ function doderp(seat, msg, amount) {
   .last_action {
     position: absolute;
     white-space: nowrap;
-    bottom: calc(var(--playerSize) / 3);
-    transform: translate(-50%, 0);
-    bottom: 0;
     z-index: 10;
     padding: 1px 2px;
     font-size: 12px;
@@ -585,17 +596,17 @@ function doderp(seat, msg, amount) {
     display: inline-block;
     color: white;
     text-shadow: 0 0 18px black;
-    border: 1px solid #44cc44;
+    // border: 1px solid #44cc44;
     // box-shadow: 0 0 10px #22aa22;
-    border-radius: 2px;
+    border-radius: 20px;
     &.Fold {
       background: linear-gradient(to bottom, #9a451e 0%,#d8532a 50%,#ca4b20 51%,#e8957e 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
-      border: 1px solid #e22e2e;
+      // border: 1px solid #e22e2e;
       // box-shadow: 0 0 10px #bb0f0f;
     }
     &.Raise, &.Bet {
       background: linear-gradient(to bottom, #9a8b1e 0%,#d8b52a 50%,#caab20 51%,#e8d17e 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
-      border: 1px solid #fab73b;
+      // border: 1px solid #fab73b;
       // box-shadow: 0 0 10px #eb9f12;
     }
   }
@@ -603,8 +614,12 @@ function doderp(seat, msg, amount) {
     .dealer {
       right: calc(var(--playerSize) * -1.5);
     }
-    .committed {
+    .last_action {
+      top: 24px;
       right: calc(var(--playerSize) * 1.25);
+    }
+    .committed {
+      right: calc(var(--playerSize) * 1.35);
       text-align: right;
     }
     
@@ -613,19 +628,19 @@ function doderp(seat, msg, amount) {
     .dealer {
       left: calc(var(--playerSize) * -1.5);
     }
+    .last_action {
+      top: 24px;
+      left: calc(var(--playerSize) * 1.25); 
+    }
+    .committed {
+      left: calc(var(--playerSize) * 1.35); 
+    }
   }
   &.middle {
     .dealer {
       top: calc(var(--playerSize) / 0.8);
       left: calc(var(--playerSize) * -4.7);
     }
-  }
-  &.left {
-    .committed {
-      left: calc(var(--playerSize) * 1.25); 
-    }
-  }
-  &.middle {
     .cards {
       width: calc(var(--playerSize) * 3);
       bottom: calc(var(--playerSize) * 0.1);
@@ -650,6 +665,7 @@ function doderp(seat, msg, amount) {
       left: calc(var(--playerSize) * -2.3);
     }
     .last_action {
+      transform: translate(-50%, 0);
       bottom: -19px;
       left: calc(var(--playerSize) * -3);
     }
@@ -668,13 +684,18 @@ function doderp(seat, msg, amount) {
     {:else}
       No Ante
     {/if}
-    <br>Total Player Chips: {totalPlayerChips}
+    <br>Total Chips In Play: {totalPlayerChips}<br>
+    {#if currentHand.game_number}
+      Game #{currentHand.game_number}
+    {/if}
     
   </div>
   <div class="board">
     <div class="cards" class:showing_down={isShowDown}>
-      {#each state.board as card, index}
-        <img class="card" class:strongest={strongestCards && strongestCards.indexOf(card) !== -1} out:fly={{y: -30}} in:deal="{{ seat: 0, card:index,y: -25, duration: zeroIfAnimationsDisabled(450) }}" src="/cards/{card.toLowerCase()}.png" alt={card}>
+      {#each Array(5) as _, index}
+        {#if state.board[index]}
+          <img class="card" class:strongest={strongestCards && strongestCards.indexOf(state.board[index]) !== -1} out:fade={{duration: zeroIfAnimationsDisabled(300)}} in:deal="{{ seat: 0, card:index,y: -25, duration: zeroIfAnimationsDisabled(450) }}" src="/cards/{state.board[index].toLowerCase()}.png" alt={state.board[index]}>
+        {/if}
       {/each}
     </div>
   </div>
@@ -752,7 +773,7 @@ function doderp(seat, msg, amount) {
           </div>
           {/if}
           {#if state.seats[index].lastAction}
-            <div transition:fly={{y: 20}} class="last_action {state.seats[index].lastAction}">
+            <div transition:scale class="last_action {state.seats[index].lastAction}">
               {state.seats[index].lastAction }
             </div>
           {/if}

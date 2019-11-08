@@ -18,7 +18,6 @@ export async function preload(page, session) {
 
   export let history;
   export let tableData;
-
   let table;
 
   // Build initial table state from hand history object
@@ -149,7 +148,7 @@ export async function preload(page, session) {
     <History on:jump={(e) => performTo(e.detail.roundIndex, e.detail.actionIndex)} history={history} position={historyPosition}></History>
   </div>
 
-  <Table bind:state={tableState} bind:this={table} bind:heroIndex={playerIndex} {tableData}></Table>
+  <Table currentHand={history} bind:state={tableState} bind:this={table} bind:heroIndex={playerIndex} {tableData}></Table>
   
   <div slot="controls">
     <button class="btn" on:click={performToPreviousAction}>&lt; Back</button>

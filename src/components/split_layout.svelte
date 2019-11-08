@@ -3,7 +3,7 @@
   @media (max-width: 800px) { @content; }
 }
 .main_frame {
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.15) 70%,rgba(0,0,0,0.3) 100%);
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%,rgba(0,0,0,0.25) 70%,rgba(0,0,0,0.45) 100%);
   position: fixed;
   height: 100vh;
   width: 70vw;
@@ -90,8 +90,10 @@ import Tables from './tables.svelte';
 let leftSideShown = false;
 
 let leftContent = {}
+
+// TODO: sticky scrolling should be done somewhere else
 let sticky = true
-function stickOrUnstick() {
+function stickOrUnstick(e) {
   sticky = leftContent.scrollTop === (leftContent.scrollHeight - leftContent.offsetHeight)
 }
 
@@ -126,7 +128,7 @@ onDestroy(function() {
   <div class="glossy title">
     <slot name="title"></slot>
   </div>
-  <div bind:this={leftContent} class="inner" on:scroll={stickOrUnstick}>
+  <div bind:this={leftContent} class="inner" on:wheel={stickOrUnstick}>
     <slot name="left"></slot>
   </div>
 </div>
