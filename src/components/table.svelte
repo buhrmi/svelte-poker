@@ -157,6 +157,7 @@ $: {
     const cards = state.board.concat(seat.cards)
     solvedHands[i] = solver.Hand.solve(cards)
     strongestCards = Hand.winners(solvedHands.filter(s=>s)).toString()
+    strongestCards = strongestCards.replace(/10/g,'T')
   }
 }
 

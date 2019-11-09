@@ -15,13 +15,14 @@ const dispatch = createEventDispatcher();
   .pots {
     padding-left: 16px;
   }
+
   .pots {
     padding: 6px;
     padding-left: 16px;
     position: relative;
     text-align: center;
     border-bottom: 1px solid rgba(255,255,255,0.1);
-    border-left: 2px solid rgba(255,255,0,0.6);
+    border-left: 1px solid rgba(255,255,0,0.6);
   }
   .review {
     padding: 6px;
@@ -29,7 +30,7 @@ const dispatch = createEventDispatcher();
     position: relative;
     text-align: center;
     border-bottom: 1px solid rgba(255,255,255,0.1);
-    border-left: 2px solid rgba(255,255,255,0.6);
+    border-left: 1px solid rgba(255,255,255,0.6);
   }  
   .action {
     padding: 6px;
@@ -37,7 +38,7 @@ const dispatch = createEventDispatcher();
     position: relative;
     text-align: center;
     border-bottom: 1px solid rgba(255,255,255,0.1);
-    border-left: 2px solid rgba(0,255,0,0.6);
+    border-left: 1px solid rgba(0,255,0,0.6);
     cursor: pointer;
     &:hover {
       background-color: rgba(255,255,255,0.1);
@@ -48,10 +49,10 @@ const dispatch = createEventDispatcher();
       left: 0px;
     }
     &.Fold {
-      border-left: 2px solid rgba(255,0,0,0.6);
+      border-left: 1px solid rgba(255,0,0,0.6);
     }
     &.Bet, &.Raise {
-      border-left: 2px solid rgba(255,200,0,0.6);
+      border-left: 1px solid rgba(255,200,0,0.6);
     }
   }
   .hand {
@@ -61,6 +62,18 @@ const dispatch = createEventDispatcher();
     color: #99A;
     transition: all 0.3s;
     &:last-of-type, &:hover {
+      .action {
+        box-shadow: 10px 0 10px -10px rgba(0,255,0,0.6) inset;
+        &.Bet, &.Raise {
+          box-shadow: 10px 0 10px -10px rgba(255,200,0,0.6) inset;
+        }
+        &.Fold {
+          box-shadow: 10px 0 10px -10px rgba(255,0,0,0.6) inset;
+        }
+      }
+      .pots {
+        box-shadow: 10px 0 10px -10px rgba(255,255,0,0.6) inset;
+      }
       color: #EEF;
       a {
         color: #EEF;
@@ -70,7 +83,16 @@ const dispatch = createEventDispatcher();
       color: #99A;
     }
   }
-
+  .player, .activity {
+    display: inline-block;
+    text-align: left;
+  }
+  .player {
+    width: 45%;
+  }
+  .activity {
+    width: 45%;
+  }
 </style>
 
 <div class="hand">
@@ -83,8 +105,12 @@ const dispatch = createEventDispatcher();
       {/if}
       {#each round.actions as action, actionIndex}
         <div in:fly={{x:-10}} on:click={() => dispatch('jump', {roundIndex, actionIndex})} class="action {action.action}" class:active={$position.round == roundIndex && $position.action == actionIndex}>
-          {#await player.fetch(action.player_id)}loading...{:then player}{player && player.nick}{/await}
-          {action.action} {action.amount ? action.amount : ''}
+          <div class="player">
+            {#await player.fetch(action.player_id)}loading...{:then player}{player && player.nick}{/await}
+          </div>
+          <div class="activity">
+            {action.action} {action.amount ? action.amount : ''}
+          </div>
           {#if action.cards}
             <CardString cards={action.cards}></CardString>
           {/if}

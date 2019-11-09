@@ -136,6 +136,11 @@ export async function preload(page, session) {
     width: 120px;
     vertical-align: middle;
   }
+  .download {
+    display: inline-block;
+    margin: 3px 3px;
+    padding: 4px 8px;
+  }
 </style>
 
 
@@ -146,6 +151,10 @@ export async function preload(page, session) {
 
   <div slot="left">
     <History on:jump={(e) => performTo(e.detail.roundIndex, e.detail.actionIndex)} history={history} position={historyPosition}></History>
+    <div class="options">
+      <p>Download this hand history in the <a href="https://hh-specs.handhistory.org" target="_blank">Standardized Hand History Format</a> to import it into your Poker Software.</p>
+      <a class="btn download" type="application/octet-stream" target="_blank" download href="{process.env.API_URL}/hands/{history.game_number}.json">Download Hand History</a>
+    </div>
   </div>
 
   <Table currentHand={history} bind:state={tableState} bind:this={table} bind:heroIndex={playerIndex} {tableData}></Table>
