@@ -71,14 +71,15 @@ export async function preload(page, session) {
   let connectingTo = false;
   let connectedTo = false;
   let wasConnected = false;
-
+  let potObjects = []
+  let connectedAs;
   $: {
     // Establishing the connection inside a reactive block makes us automatically reconnect when tableData.id changes. Sapper is pretty cool, indeed.
     let connectionString = `${process.env.ENGINE_URL}?table_id=${tableData.id}`
     const accessToken = $player.access_token // TODO: use cookie-based auth when connectingTo the engine. dont transfer access token in player object!
     if (accessToken) connectionString += `&access_token=${accessToken}`
 
-    if ($player.access_token && connectingTo !== tableData.id) {
+    if ($player.access_token && (connectingTo !== tableData.id || connectedAs !== $player.access_token)) {
       if (socket) socket.close()
       
       wasConnected = false
@@ -89,6 +90,7 @@ export async function preload(page, session) {
       history = {rounds: []};
       hands = [];
       connectingTo = tableData.id;
+      connectedAs = $player.access_token;
       socket = new WebSocket(connectionString);
       console.log('Connecting to', connectionString)
       
@@ -124,6 +126,23 @@ export async function preload(page, session) {
         tempActions.push(message)
       }
       table.perform(message);
+    }
+
+    if (message.type == 'bring-in-required') {
+      if ($player.balances.BTC.available_balance + tableState.seats[playerIndex].stack < message.amount) {
+        const depositDialog = showDialog({component: Deposit, title: "Bring in required", requiredAmount: message.amount, text: message.text, options: null})
+        depositDialog.$on('OK', async function() {
+          await bringIn(message.amount);
+          await sitIn();
+        })
+      }
+      else {
+        const bringInDialog = showDialog({component: BringIn, title: "Bring in required", min: message.amount - tableState.seats[playerIndex].stack})
+        bringInDialog.$on('OK', async function(ev) {
+          await bringIn(ev.detail);
+          await sitIn();
+        })
+      }
     }
 
     // if the message has a "street" property, it's the beginning of a new round
@@ -226,7 +245,7 @@ export async function preload(page, session) {
           title: message.type
         }
       })
-      dialog.$on('confirm', () => dialog.$destroy())
+      dialog.$on('OK', () => dialog.$destroy())
       dialog.$on('dismiss', () => dialog.$destroy())
     }
 
@@ -239,9 +258,7 @@ export async function preload(page, session) {
         const seat = table.getSeatByPlayerId(wins.player_id)
         tableState.seats[seat].stack += wins.win_amount
       }
-      setTimeout(function() {
-        table.playWinningAnimation([message])
-      }, 1000)
+      potObjects.push(message)
     }
 
     if (message.type == 'hand-started') {
@@ -264,14 +281,18 @@ export async function preload(page, session) {
     if (message.type == 'hand-ended') {
       tableState.handRunning = false
       history.ended = true
-      // table.isShowDown = true
+      setTimeout(function() {
+        table.playWinningAnimation(potObjects);
+        potObjects = []
+      }, 1000)
+      
       setTimeout(function() {
         for (let i = 0; i < tableState.seats.length; i++) {
           const seat = tableState.seats[i];
 
           if (seat) {
             if (seat.remove_after_hand_ended) tableState.seats[i] = null
-            else seat.cards = []
+            else if (!tableState.handRunning) seat.cards = []
           }
         }
         tableState.board = []
@@ -353,16 +374,9 @@ export async function preload(page, session) {
   }
   async function sitDown(index) {
     await socket.send(JSON.stringify({msg: "sit-down", seat: index}))
-    // await bringIn(100);
-    // await bringIn($player.balances[tableData.currency].available_balance);
     const minBringIn = tableData.settings.min_bring_in
     if ($player.balances[tableData.currency].available_balance < minBringIn) {
-      showDialog({component: Deposit, title: 'Not enough chips', requiredAmount: minBringIn})
-      // const bringInDialog = showDialog({component: BringIn, title: 'Bring in', min: tableData.settings.min_bring_in})
-      // bringInDialog.$on('confirm', async function(ev) {
-      //   await bringIn(ev.detail);
-      //   await sitIn();
-      // })
+      showDialog({component: Deposit, title: 'Not enough chips', requiredAmount: minBringIn, options: null})
     }
     else {
       await bringIn(tableData.settings.min_bring_in || minBringIn);
@@ -374,7 +388,15 @@ export async function preload(page, session) {
     return await socket.send(JSON.stringify({msg: "sit-in"}))
   }
   async function bringIn(amount) {
-    await socket.send(JSON.stringify({msg: "bring-in", amount}))
+    if (!amount) {
+      const bringInDialog = showDialog({component: BringIn, title: "Bring in"})
+      bringInDialog.$on('OK', async function(ev) {
+        if (ev.detail) await bringIn(ev.detail);
+      })
+    }
+    else {
+      await socket.send(JSON.stringify({msg: "bring-in", amount}))
+    }
   }
   function standUp() {
     socket.send(JSON.stringify({msg: "stand-up"}))
@@ -415,7 +437,7 @@ export async function preload(page, session) {
   padding: 6px;
   padding-bottom: 0px;
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: -86px;
   bottom: 110%;
   button {
@@ -474,6 +496,7 @@ button {
         {:else}
           <button class="btn alt" on:click={() => sitIn()}>Sit In</button>
         {/if}
+        <button class="btn alt" on:click={() => bringIn()}>Bring In</button>
         <button class="btn alt" on:click={() => standUp()}>Stand Up</button>
       </div>
       <div class="bet_slider glossy">
@@ -485,7 +508,7 @@ button {
       {#if tableState.seats[playerIndex] && tableState.maxCommitment == tableState.seats[playerIndex].committed}
         <button class="btn {isPlayersTurn ? '' : 'disabled'} check" disabled={!isPlayersTurn} on:click={() => check()}>Check</button>
       {:else}
-        <button class="btn {isPlayersTurn ? '' : 'disabled'} call" disabled={!isPlayersTurn} on:click={() => call()}>Call {tableState.maxCommitment - tableState.seats[playerIndex].committed}</button>
+        <button class="btn {isPlayersTurn ? '' : 'disabled'} call" disabled={!isPlayersTurn} on:click={() => call()}>Call {(tableState.maxCommitment - tableState.seats[playerIndex].committed).toLocaleString()}</button>
       {/if}
       
       {#if isPlayersTurn}

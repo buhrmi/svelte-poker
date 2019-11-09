@@ -5,26 +5,34 @@ import {writable} from 'svelte/store';
 
 const player = writable({})
 
+function buildQueryString(params) {
+  let result = ''
+  if (!params) return result
+  result += '?'
+  for (const param in params) {
+    const value = params[param]
+    result += param + '=' + encodeURIComponent(value) + '&'
+  }
+  return result
+}
+
 player.reload = async function(params) {
   try {
     let url = process.env.API_URL + '/me.json'
-    if (params) {
-      url += '?'
-      for (const param in params) {
-        const value = params[param]
-        url += param + '=' + encodeURIComponent(value)
-      }
-    }
-    const res = await fetch(url, {
-      credentials: 'include',
-    })
-    const json = await res.json()
-
-    player.set(json);
+    url += buildQueryString(params)
+    const playerData = await fetch(url, {credentials: 'include'}).then((res) => res.json())
+    player.set(playerData);
   } 
   catch {
 
   }
+}
+
+player.login = async function(params) {
+  let url = process.env.API_URL + '/session'
+  url += buildQueryString(params)
+  const playerData = await fetch(url, {method: 'POST', credentials: 'include'}).then((res) => res.json())
+  player.set(playerData);
 }
 
 const fetchPromises = {}
@@ -49,7 +57,7 @@ function showDialog(props) {
     intro: true,
     props
   })
-  dialog.$on('confirm', dialog.$destroy)
+  dialog.$on('OK', dialog.$destroy)
   dialog.$on('dismiss', dialog.$destroy)
   return dialog
 }

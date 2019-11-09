@@ -81,6 +81,11 @@
     position: fixed;
   }
 }
+.tables {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+}
 </style>
 
 <script>
@@ -110,8 +115,10 @@ onDestroy(function() {
 
 
 <div class="main_frame">
-  <span class="link" on:click={() => showDialog({component: Tables, title: 'Find a game'})}>Tables</span>
   <slot></slot>
+  <div class="tables">
+    <span class="link" on:click={() => showDialog({component: Tables, title: 'Choose a Table 😊', options: null})}>More Tables</span>
+  </div>
   <div class="controls glossy">
     <div class="toggle_left glossy" on:click={() => leftSideShown ^= true}>📜</div>
     <div class="inner">

@@ -18,6 +18,6 @@ p  {
 
 <p> 
 {#if $player.balances.BTC.available_balance}
-<b>Oh no, you're all out of money!</b> Suddenly, <b>buhrmi</b> shows up and gives you {$player.balances.BTC.available_balance.toLocaleString()} Satoshi. "Hope this will help you on your quest", he says.
+You're just walking around, minding your own business. Suddenly, <b>buhrmi</b> shows up and gives you <b>{$player.balances.BTC.available_balance.toLocaleString()} Satoshi</b>. "Hope this will help you on your quest", he says.
 {/if}
 </p>

@@ -11,9 +11,10 @@ import {scale} from 'svelte/transition'
 
 // If component is given, it will use it as the dialog's content
 export let component
-export let primaryButton = 'OK'
 export let title = 'Notice'
-export let text = 'Hello World'
+export let text;
+export let optionCaptions = {}
+export let options = ['OK']
 
 export let x = 0
 export let y = 0
@@ -157,15 +158,17 @@ function dragEnd(e) {
     </div>
     <div class="content">
       {#if component}
-        <svelte:component {dispatch} bind:value this={component} {...$$props}></svelte:component>
+        <svelte:component {dispatch} bind:optionCaptions bind:value this={component} {...$$props}></svelte:component>
       {:else}
         <slot>{text}</slot>
       {/if}
-      <div class="options">
-        <div class="btn" on:click={()=> dispatch('confirm', value)}>
-          {primaryButton}
-        </div>	
-      </div>
+      {#if options}
+        <div class="options">
+          {#each options as option}
+            <div class="btn" on:click={()=> dispatch(option, value)}>{optionCaptions[option] || option}</div>
+          {/each}
+        </div>
+      {/if}
     </div>
   </div>
 </div>

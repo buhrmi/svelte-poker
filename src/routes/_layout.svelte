@@ -16,10 +16,14 @@ import Withdrawals from '../components/withdrawals.svelte';
 const {page} = stores()
 
 onMount(async function() {
+  player.subscribe(function(player) {
+    if ($player.is_new) showDialog({component: NewPlayer, title: `Welcome ${$player.nick}`})
+  })
+
   await player.reload($page.query)
-  if ($player.is_new) showDialog({component: NewPlayer, title: `Welcome ${$player.nick}`})
+  
   // else showDialog({component: WelcomeBack, title: 'Welcome Back'})
-  showDialog({component: Tables, title: 'Pick a game', id: 'tables'})
+  // showDialog({component: PlayerSettings, title: 'Pick a game', id: 'tables'})
 })
 
 </script>
@@ -58,7 +62,7 @@ onMount(async function() {
 
 {#if $player.id}
   <div class="playerinfo">
-    <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings'})}>{$player.nick}</span> • Satoshis: {$player.balances['BTC'].available_balance.toLocaleString()} • On Tables: {$player.balances['BTC'].stacks.toLocaleString()} <button class="btn" on:click={() => showDialog({component: Deposit, title: 'Get more chips'})}>Get more</button>
+    <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings'})}>{$player.nick}</span> • Satoshis: {$player.balances['BTC'].available_balance.toLocaleString()} • On Tables: {$player.balances['BTC'].stacks.toLocaleString()} <button class="btn" on:click={() => showDialog({component: Deposit, title: 'Get more chips', options: null})}>Get more</button>
   </div>
 {/if}
 

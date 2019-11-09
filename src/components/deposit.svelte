@@ -65,7 +65,7 @@ th, td {
     </tr>
     <tr>
       <td><h1>{requiredAmount.toLocaleString()}</h1></td>
-      <td><h1>{$player.balances.BTC.available_balance}</h1></td>
+      <td><h1>{$player.balances.BTC.available_balance.toLocaleString()}</h1></td>
     </tr>
   </table>
   <p>Purchase {(requiredAmount - $player.balances.BTC.available_balance).toLocaleString()} Chips for only {(requiredAmount - $player.balances.BTC.available_balance) / 100000000} BTC!</p>
