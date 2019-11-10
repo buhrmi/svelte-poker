@@ -11,7 +11,7 @@ body {
 	overflow: hidden;
 }
 
-a, span.link {
+a, .link {
 	text-decoration: underline;
 	color: white;
 	font-weight: normal;

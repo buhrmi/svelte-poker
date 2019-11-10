@@ -1,3 +1,7 @@
+<script context="module">
+  
+</script>
+
 <script>
 export let segment;
 
@@ -62,10 +66,10 @@ onMount(async function() {
 
 {#if $player.id}
   <div class="playerinfo">
-    <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings'})}>{$player.nick}</span> • Satoshis: {$player.balances['BTC'].available_balance.toLocaleString()} • On Tables: {$player.balances['BTC'].stacks.toLocaleString()} <button class="btn" on:click={() => showDialog({component: Deposit, title: 'Get more chips', options: null})}>Get more</button>
+    <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings'})}>{$player.nick}</span> • Chips: {$player.balances['BTC'].available_balance.toLocaleString()} • On Tables: {$player.balances['BTC'].stacks.toLocaleString()} <button class="btn" on:click={() => showDialog({component: Deposit, title: 'Get more chips', options: null})}>Get more</button>
   </div>
 {/if}
 
-<!-- <div class="copyright">
+<div class="copyright">
 Copyright © 2019 <br><a target="_blank" href="https://rocksolid.dev">Rock Solid Development</a>
-</div> -->
+</div>

@@ -57,7 +57,6 @@ th, td {
 
 
 {#if requiredAmount}
-
   <table>
     <tr>
       <th><h2>Required Chips</h2></th>
@@ -79,6 +78,10 @@ th, td {
   </p>
 {/if}
 
+<p>
+You can use the <a href="https://coinfaucet.eu/en/btc-testnet/" target="_blank">Bitcoin Testnet3 Faucet</a> to get free Bitcoin for testing.
+</p>
+
 {#await addresses then addresses}
 <pre>
 <a target="_blank" href="bitcoin:{addresses.BTC}">{addresses.BTC}</a> <span class="copy btn" on:click={() => copyToClipboard(addresses.BTC)}>Copy Address</span>
@@ -88,6 +91,10 @@ th, td {
 </p>
 {/await}
 
+
+{#if !requiredAmount}
+  <h2>Your Balance: {$player.balances.BTC.available_balance.toLocaleString()}</h2>
+{/if}
 <p>
   Your balance will automatically increase after 1 confirmation. Please leave this window open while waiting.
 </p>

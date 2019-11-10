@@ -117,7 +117,7 @@ onDestroy(function() {
 <div class="main_frame">
   <slot></slot>
   <div class="tables">
-    <span class="link" on:click={() => showDialog({component: Tables, title: 'Choose a Table 😊', options: null})}>More Tables</span>
+    <span class="link" on:click={() => showDialog({component: Tables, title: 'Choose a Table 😊', options: null})}>Show Tables</span>
   </div>
   <div class="controls glossy">
     <div class="toggle_left glossy" on:click={() => leftSideShown ^= true}>📜</div>

@@ -1,11 +1,12 @@
 <svelte:options accessors={true}/>
 
 <script>
-import {player} from '@/shared';
+import {player, showDialog} from '@/shared';
 import { fly, fade, crossfade, scale } from 'svelte/transition';
 import { quintOut, cubicOut } from 'svelte/easing';
 import { createEventDispatcher, tick, onMount } from 'svelte';
 import { vortex } from '@/transitions'
+import Player from './player.svelte'
 import solver from 'pokersolver';
 // This component is on a player seat
 import Stack from './stack.svelte'
@@ -461,6 +462,7 @@ function doderp(seat, msg, amount) {
     box-shadow: 0 0 20px 20px rgba(255,255,0,0);
     transition: all 0.3s;
     border-radius: 100%;
+    cursor: pointer;
   }
   &.active {
     .profile_pic {
@@ -545,6 +547,7 @@ function doderp(seat, msg, amount) {
     // }
   }
   .detailsbox {
+    cursor: pointer;
     position: absolute;
     width: calc(var(--playerSize) * 2.4);
     height: calc(var(--playerSize));
@@ -750,14 +753,14 @@ function doderp(seat, msg, amount) {
         
           {#await player.fetch(state.seats[index].player_id) then player}
             {#if state.seats[index]}
-              <div class="profile_pic">
+              <div class="profile_pic" on:click={() => showDialog({component: Player, title: player.nick, player})}>
                 <img src={player.profile_pic} alt={player.nick} class="pic">
               </div>
-              <div class="detailsbox glossy">
+              <div class="detailsbox glossy" on:click={() => showDialog({component: Player, title: player.nick, player})}>
                 {#if state.activeSeatIndex == index}
                   <div class="glow"></div>
                 {/if}
-                <div class="name">
+                <div class="name link">
                   {player.nick}
                 </div>
                 <div class="stack">

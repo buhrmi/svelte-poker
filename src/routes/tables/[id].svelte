@@ -1,7 +1,11 @@
 <script context="module">
 export async function preload(page, session) {
   const tableData = await this.fetch(process.env.API_URL + '/tables/' + page.params.id + '.json').then((res) => res.json())
-  return { tableData }
+  let referrerData
+  if (page.query.referrer) {
+    referrerData = await this.fetch(process.env.API_URL + '/players/' + page.query.referrer + '.json').then((res) => res.json())
+  }
+  return { tableData, referrerData }
 }
 </script>
 
@@ -19,6 +23,7 @@ export async function preload(page, session) {
 
   let { session, page } = stores();
 
+  export let referrerData;
   export let tableData;
   let tableState = {
     settings: tableData.settings,
@@ -32,9 +37,9 @@ export async function preload(page, session) {
   let tipAmount = tableData.settings.big_blind_amount
   let currentRoundIndex = 0;
   let currentActionIndex = 0;
-  let playerIndex;
   let showHistory = true;
   let betSlider = 0;
+  let gotTableState = false;
   let raiseTo = tableData.settings.big_blind_amount
   $: {
     // only keep the last 20 hands because rendering will be slow
@@ -55,14 +60,19 @@ export async function preload(page, session) {
     }
     else raiseTo = tableData.settings.big_blind_amount
   }
+  let playerIndex;
+  let playersSittingIn = []
   $: {
     playerIndex = null
+    playersSittingIn = []
     if ($player) {
       for (let index = 0; index < tableState.seats.length; index++) {
         const seat = tableState.seats[index];
         if (seat && seat.player_id == $player.id) playerIndex = index
+        if (seat && seat.sitting_in) playersSittingIn.push(seat)
       }
     }
+    playersSittingIn = playersSittingIn
   }
   $: isPlayersTurn = playerIndex == tableState.activeSeatIndex
   $: isPlayerSittingIn = tableState.seats[playerIndex] && tableState.seats[playerIndex].sitting_in
@@ -195,6 +205,7 @@ export async function preload(page, session) {
         }
         tableState.seats[i] = Object.assign({}, tableState.seats[i], seat)
       }
+      tick().then(() => gotTableState = true)
     }
 
     if (message.type == 'sit-down') {
@@ -437,9 +448,9 @@ export async function preload(page, session) {
   padding: 6px;
   padding-bottom: 0px;
   position: absolute;
-  bottom: 0;
-  left: -86px;
-  bottom: 110%;
+  bottom: 6px;
+  left: 6px;
+  white-space: nowrap;
   button {
     height: 24px;
     width: 75px;
@@ -447,10 +458,11 @@ export async function preload(page, session) {
     box-shadow: none;
   }
   @include narrow {
-    left: 50px;
-    top: -34px;
+    left: 36px;
+    bottom: 66px;
     button {
-      
+      font-size: 12px;
+      width: 64px;
       display: inline-block;
     }
   }
@@ -463,11 +475,38 @@ button {
 .name {
   padding: 3px 8px;
 }
+
+.invite_box {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 50%;
+  position: absolute;
+  text-align: center;
+  color: white;
+  box-shadow: 10px 10px 30px -10px black;
+  .inner {
+    margin: 5px;
+    padding: 5px;
+    box-shadow: 1px 1px 1px black inset;
+    background: #0d0f1a;
+  }
+}
 </style>
+
+<svelte:head>
+  {#if referrerData}
+    <title>{referrerData.nick} invites you to {tableData.name}</title>
+    <meta property="og:title" content="{referrerData.nick} invites you to {tableData.name}" />
+  {:else}
+    <title>{tableData.name}</title>
+    <meta property="og:title" content="{tableData.name}" />
+  {/if}
+</svelte:head>
 
 <SplitLayout>
   <div slot="title">
-    #{tableData.id} • {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hold'em{/if}
+    #{tableData.id} • {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hold'Em{/if}
   </div>
 
   <div slot="left">
@@ -480,6 +519,23 @@ button {
     <Table currentHand={history} {tableData} bind:state={tableState} bind:heroIndex={playerIndex} bind:this={table} on:sitDown={(event) => sitDown(event.detail)}></Table>
   {/if}
 
+  {#if !tableState.handRunning && gotTableState && playersSittingIn.length < 2 && typeof playerIndex == 'number' && isPlayerSittingIn}
+    <div out:scale in:scale={{delay: 1000}} class="invite_box glossy">
+      <div class="inner">
+        "Woah, looks empty in here...", buhrmi says.<br>Invite some friends, and they'll receive 1,000 Chips on the House.<br>
+        <a href="/tables/{tableData.id}?referrer={$player.id}">Invitation Link</a>
+      </div>
+    </div>
+  {/if}
+  <div class="seat_buttons">
+    {#if isPlayerSittingIn}
+      <button class="btn alt" on:click={() => sitOut()}>Sit Out</button>
+    {:else}
+      <button class="btn alt" on:click={() => sitIn()}>Sit In</button>
+    {/if}
+    <button class="btn alt" on:click={() => bringIn()}>Bring In</button>
+    <button class="btn alt" on:click={() => standUp()}>Stand Up</button>
+  </div>
   <div slot="controls">
     {#if !connectedTo}
       {#if wasConnected}
@@ -490,15 +546,6 @@ button {
     {:else if $player.id && playerIndex == null}
       You can pick any open seat 😊
     {:else}
-      <div class="seat_buttons">
-        {#if isPlayerSittingIn}
-          <button class="btn alt" on:click={() => sitOut()}>Sit Out</button>
-        {:else}
-          <button class="btn alt" on:click={() => sitIn()}>Sit In</button>
-        {/if}
-        <button class="btn alt" on:click={() => bringIn()}>Bring In</button>
-        <button class="btn alt" on:click={() => standUp()}>Stand Up</button>
-      </div>
       <div class="bet_slider glossy">
         <div class="inner">
           <input type="range" bind:value={betSlider} min="0" max="1000">
