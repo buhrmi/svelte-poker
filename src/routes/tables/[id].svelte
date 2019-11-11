@@ -268,6 +268,7 @@ export async function preload(page, session) {
         const wins = message.player_wins[i];
         const seat = table.getSeatByPlayerId(wins.player_id)
         tableState.seats[seat].stack += wins.win_amount
+        wins.seat_id = seat
       }
       potObjects.push(message)
     }

@@ -200,7 +200,8 @@ export function playWinningAnimation(pots) {
     const pot = pots[i];
     for (let pwi = 0; pwi < pot.player_wins.length; pwi++) {
       const win = pot.player_wins[pwi];
-      if (win.win_amount > 0) winningSeats.push(getSeatByPlayerId(win.player_id))
+      if (typeof win.seat_id !== 'number') win.seat_id = getSeatByPlayerId(win.player_id)
+      if (win.win_amount > 0) winningSeats.push(win.seat_id)
       winningSeats = winningSeats
     }
   }
@@ -708,7 +709,7 @@ function doderp(seat, msg, amount) {
       {#each winningPots as winningPot}
         {#each winningPot.player_wins as win}
           <div class="player_wins">
-            <div out:vortex={{target: seatElements[getSeatByPlayerId(win.player_id)], duration: zeroIfAnimationsDisabled(700)}}>
+            <div out:vortex={{target: seatElements[win.seat_id], duration: zeroIfAnimationsDisabled(700)}}>
               <Chips amount={win.win_amount} width={playerSize * 0.8}></Chips>
             </div>
           </div>
