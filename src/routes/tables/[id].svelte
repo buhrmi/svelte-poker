@@ -498,10 +498,12 @@ button {
 <svelte:head>
   {#if referrerData}
     <title>{referrerData.nick} invites you to {tableData.name}</title>
-    <meta property="og:title" content="{referrerData.nick} invites you to {tableData.name}" />
+    <meta property="og:title" content="{referrerData.nick} invites you to {tableData.name}">
+    <meta name="twitter:title" content="{referrerData.nick} invites you to {tableData.name}">
   {:else}
     <title>{tableData.name}</title>
-    <meta property="og:title" content="{tableData.name}" />
+    <meta property="og:title" content="{tableData.name}">
+    <meta name="twitter:title" content="{tableData.name}">
   {/if}
 </svelte:head>
 
