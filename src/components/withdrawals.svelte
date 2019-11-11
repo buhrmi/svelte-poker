@@ -17,16 +17,7 @@ async function create() {
 </script>
 
 
-
-<h1>Withdraw</h1>
-{#await promise }
-  <p>Loading...</p>
-{:then withdrawals}
-  {withdrawals}
-{/await}
-
-<p>Current Balance: {$player.balances.BTC.available_balance.toLocaleString()} Satoshi</p>
-<input placeholder="Amount">
-<input placeholder="Receiver">
-<button on:click={create}>Request Withdrawal</button>
+<p>
+Withdraw / Exchange functions coming soon. Stay tuned.
+</p>
 

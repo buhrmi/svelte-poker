@@ -86,10 +86,10 @@ export async function preload(page, session) {
   $: {
     // Establishing the connection inside a reactive block makes us automatically reconnect when tableData.id changes. Sapper is pretty cool, indeed.
     let connectionString = `${process.env.ENGINE_URL}?table_id=${tableData.id}`
-    const accessToken = $player.access_token // TODO: use cookie-based auth when connectingTo the engine. dont transfer access token in player object!
+    const accessToken = $player.access_token // this is only in dev- or telegram mode
     if (accessToken) connectionString += `&access_token=${accessToken}`
 
-    if ($player.access_token && (connectingTo !== tableData.id || connectedAs !== $player.access_token)) {
+    if ($player.id && (connectingTo !== tableData.id || connectedAs !== $player.id)) {
       if (socket) socket.close()
       
       wasConnected = false
@@ -100,7 +100,7 @@ export async function preload(page, session) {
       history = {rounds: []};
       hands = [];
       connectingTo = tableData.id;
-      connectedAs = $player.access_token;
+      connectedAs = $player.id;
       socket = new WebSocket(connectionString);
       console.log('Connecting to', connectionString)
       
@@ -506,7 +506,7 @@ button {
 
 <SplitLayout>
   <div slot="title">
-    {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hold'Em{/if} • {tableData.currency}
+    {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hodl'em{/if} • {tableData.currency}
   </div>
 
   <div slot="left">

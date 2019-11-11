@@ -21,7 +21,7 @@ const {page} = stores()
 
 onMount(async function() {
   player.subscribe(function(player) {
-    if ($player.is_new) showDialog({component: NewPlayer, title: `Welcome ${$player.nick}`})
+    if ($player.is_new) showDialog({component: NewPlayer, title: `Welcome ${$player.nick}`, optionCaptions: {OK: 'Thanks'}})
   })
 
   await player.reload($page.query)
