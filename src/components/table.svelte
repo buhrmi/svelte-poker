@@ -261,8 +261,13 @@ export function perform(action) {
   if (action.action == 'Raise') {
     let seat = getSeatByPlayerId(action.player_id)
     if (typeof seat !== 'number') return
-    // If a player faces a $50 bet and raises by $100 to $150, the amount is $150.
-    state.minRaiseTo = 2 * (state.seats[seat].committed + action.amount) - state.maxCommitment
+    
+    if (action.amount == state.seats[seat].stack && state.minRaiseTo > action.amount + state.seats[seat].committed) {
+      // player went all-in with an illegitate raise. dont adjust min-raise
+    }
+    else {
+      state.minRaiseTo = 2 * (state.seats[seat].committed + action.amount) - state.maxCommitment
+    }
     state.seats[seat].committed += action.amount
     state.seats[seat].stack -= action.amount
     doderp(seat, action.action, action.amount)
@@ -294,7 +299,12 @@ export function perform(action) {
     doderp(seat, action.action, action.amount)
     if (state.seats[seat].stack < 0) debugger
     state.seats[seat].lastAction = 'Bet'
-    state.minRaiseTo = 2 * action.amount
+    if (action.amount == state.seats[seat].stack && tableData.settings.big_blind_amount > action.amount) {
+      // player went all-in with an illegitimate bet below big blind size. dont adjust min-raise
+    }
+    else {
+      state.minRaiseTo = 2 * action.amount
+    }    
   }
 
   if (action.action == 'Shows Cards') {

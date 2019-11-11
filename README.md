@@ -2,7 +2,7 @@
 
 A poker game written in [Svelte](https://svelte.dev) featuring [Standardized Hand Histories](https://hh-specs.handhistory.org)
 
-Excuse the overall clumsiness of the code. It will improve over time.
+This is only the frontend part of the app. Excuse the overall clumsiness of the code. It's going to (probably, maybe) improve over time.
 
 ## What's new?
 
