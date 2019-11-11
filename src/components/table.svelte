@@ -691,7 +691,7 @@ function doderp(seat, msg, amount) {
     {/if}
     <br>Total Chips In Play: {totalPlayerChips}<br>
     {#if currentHand.game_number}
-      Game #{currentHand.game_number}
+      Game ID {currentHand.game_number.split('-')[0]}
     {/if}
     
   </div>
@@ -761,7 +761,7 @@ function doderp(seat, msg, amount) {
                 {#if state.activeSeatIndex == index}
                   <div class="glow"></div>
                 {/if}
-                <div class="name link">
+                <div class="name">
                   {player.nick}
                 </div>
                 <div class="stack">
