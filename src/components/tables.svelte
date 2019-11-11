@@ -39,21 +39,16 @@ a {
   {#each tables as table}
     <a href="/tables/{table.id}" class="table glossy" on:click={() => dispatch('dismiss')}>
       <div class="host">
-        Host: {#await player.fetch(table.creator_id) then player}{player.nick}{/await}
+        Host: {#await player.fetch(table.creator_id) then player}{player.nick}{/await}<br>
+        {table.settings.rake / 100}% rake
       </div>
       <div class="name">{table.name}</div>
-      <div class="currency">{table.currency}</div>
+      <div>{#if table.ruleset == 'texas'}Texas Hodl'em{/if} • {table.currency}</div>
       <div class="blinds">
         Blinds: {table.settings.small_blind_amount}/{table.settings.big_blind_amount}
       </div>
       <div class="players">
         Players: {table.settings.table_size - table.open_seats}/{table.settings.table_size}<br>
-      </div>
-      <div class="rake">
-        Rake: {table.settings.rake / 100}%
-      </div>
-      <div class="rules">
-        Rules: {table.ruleset}
       </div>
     </a>
   {/each}

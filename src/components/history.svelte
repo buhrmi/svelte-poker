@@ -1,10 +1,10 @@
 <script>
 import {createEventDispatcher} from 'svelte';
 import CardString from './card_string.svelte';
-import {player} from '@/shared'
+import {player, showDialog} from '@/shared'
 import {writable} from 'svelte/store'
 import {fly, slide} from 'svelte/transition';
-
+import Player from './player.svelte';
 export let history = {rounds:[]};
 export let position = writable({});
 
@@ -23,8 +23,10 @@ const dispatch = createEventDispatcher();
     text-align: center;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     border-left: 1px solid rgba(255,255,0,0.6);
+    transition: all 0.3s;
   }
   .review {
+    transition: all 0.3s;
     padding: 6px;
     padding-left: 16px;
     position: relative;
@@ -33,6 +35,7 @@ const dispatch = createEventDispatcher();
     border-left: 1px solid rgba(255,255,255,0.6);
   }  
   .action {
+    transition: all 0.3s;
     padding: 6px;
     padding-left: 16px;
     position: relative;
@@ -60,7 +63,6 @@ const dispatch = createEventDispatcher();
     border-radius: 4px;
     background: #1d1f2a;
     color: #99A;
-    transition: all 0.3s;
     &:last-of-type, &:hover {
       .action {
         box-shadow: 10px 0 10px -10px rgba(0,255,0,0.6) inset;
@@ -75,11 +77,12 @@ const dispatch = createEventDispatcher();
         box-shadow: 10px 0 10px -10px rgba(255,255,0,0.6) inset;
       }
       color: #EEF;
-      a {
+      a, .link {
         color: #EEF;
       }
     }
-    a {
+    a, .link {
+      transition: all 0.3s;
       color: #99A;
     }
   }
@@ -105,9 +108,11 @@ const dispatch = createEventDispatcher();
       {/if}
       {#each round.actions as action, actionIndex}
         <div in:fly={{x:-10}} on:click={() => dispatch('jump', {roundIndex, actionIndex})} class="action {action.action}" class:active={$position.round == roundIndex && $position.action == actionIndex}>
-          <div class="player">
-            {#await player.fetch(action.player_id)}loading...{:then player}{player && player.nick}{/await}
-          </div>
+          {#await player.fetch(action.player_id) then player}
+            <div class="player link" on:click={(ev) => {showDialog({component: Player, title: player.nick, player});ev.stopPropagation()}}>
+              {player && player.nick}
+            </div>
+          {/await}
           <div class="activity">
             {action.action} {action.amount ? action.amount : ''}
           </div>

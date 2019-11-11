@@ -506,7 +506,7 @@ button {
 
 <SplitLayout>
   <div slot="title">
-    #{tableData.id} • {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hold'Em{/if}
+    {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hold'Em{/if} • {tableData.currency}
   </div>
 
   <div slot="left">
@@ -527,15 +527,17 @@ button {
       </div>
     </div>
   {/if}
-  <div class="seat_buttons">
-    {#if isPlayerSittingIn}
-      <button class="btn alt" on:click={() => sitOut()}>Sit Out</button>
-    {:else}
-      <button class="btn alt" on:click={() => sitIn()}>Sit In</button>
-    {/if}
-    <button class="btn alt" on:click={() => bringIn()}>Bring In</button>
-    <button class="btn alt" on:click={() => standUp()}>Stand Up</button>
-  </div>
+  {#if typeof playerIndex == 'number'}
+    <div class="seat_buttons" transition:scale>
+      {#if isPlayerSittingIn}
+        <button class="btn alt" on:click={() => sitOut()}>Sit Out</button>
+      {:else}
+        <button class="btn alt" on:click={() => sitIn()}>Sit In</button>
+      {/if}
+      <button class="btn alt" on:click={() => bringIn()}>Bring In</button>
+      <button class="btn alt" on:click={() => standUp()}>Stand Up</button>
+    </div>
+  {/if}
   <div slot="controls">
     {#if !connectedTo}
       {#if wasConnected}

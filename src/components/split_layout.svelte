@@ -83,8 +83,24 @@
 }
 .tables {
   position: absolute;
-  top: 5px;
-  left: 5px;
+  top: 6px;
+  left: 6px;
+}
+.hamburger {
+  width: 28px;
+  div {
+    box-shadow: 3px 3px 6px -3px black;
+    height: 4px;
+    margin-bottom: 5px;
+    background: white;
+    opacity: 0.7;
+    border-radius: 5px;
+  }
+  &:hover {
+    div {
+      opacity: 1;
+    }
+  }
 }
 </style>
 
@@ -117,7 +133,11 @@ onDestroy(function() {
 <div class="main_frame">
   <slot></slot>
   <div class="tables">
-    <span class="link" on:click={() => showDialog({component: Tables, title: 'Choose a Table 😊', options: null})}>Show Tables</span>
+    <div class="link hamburger" on:click={() => showDialog({component: Tables, title: 'Choose a Table 😊', options: null})}>
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
   </div>
   <div class="controls glossy">
     <div class="toggle_left glossy" on:click={() => leftSideShown ^= true}>📜</div>

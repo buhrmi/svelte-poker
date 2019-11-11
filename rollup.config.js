@@ -9,9 +9,10 @@ import pkg from './package.json';
 import autoPreprocess from 'svelte-preprocess'
 
 const mode = process.env.NODE_ENV;
-const api = process.env.API_URL || `http://buhrmi-desktop.dyndns.org:3000`
-const gameServer = process.env.ENGINE_URL || 'ws://buhrmi-desktop.dyndns.org:3001' || 'ws://192.168.31.44:3000'
+const api = process.env.API_URL || `http://buhrmi-desktop.dyndns.org:3001`
+const gameServer = process.env.ENGINE_URL || 'ws://buhrmi-desktop.dyndns.org:3000' || 'ws://192.168.31.44:3000'
 const dev = mode === 'development';
+const bot = process.env.TELEGRAM_BOT_NAME || 'burukadevbot'
 
 const onwarn = (warning, onwarn) => (warning.code === 'CIRCULAR_DEPENDENCY' && /[/\\]@sapper[/\\]/.test(warning.message)) || onwarn(warning);
 const dedupe = importee => importee === 'svelte' || importee.startsWith('svelte/');
@@ -19,6 +20,7 @@ const dedupe = importee => importee === 'svelte' || importee.startsWith('svelte/
 const replacements = {
 	'process.env.NODE_ENV': JSON.stringify(mode),
 	'process.env.API_URL': JSON.stringify(api),
+	'process.env.TELEGRAM_BOT_NAME': JSON.stringify(bot),
 	'process.env.ENGINE_URL': JSON.stringify(gameServer)
 }
 

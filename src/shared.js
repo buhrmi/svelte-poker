@@ -16,11 +16,14 @@ function buildQueryString(params) {
   return result
 }
 
+let cancelReload = false;
 player.reload = async function(params) {
   try {
+    cancelReload = false;
     let url = process.env.API_URL + '/me.json'
     url += buildQueryString(params)
     const playerData = await fetch(url, {credentials: 'include'}).then((res) => res.json())
+    if (cancelReload) return;
     player.set(playerData);
   } 
   catch {
@@ -28,10 +31,16 @@ player.reload = async function(params) {
   }
 }
 
+// a bit ugly but works for now
+if (typeof setInterval !== 'undefined') {
+  setInterval(player.reload, 10000)
+}
+
 player.login = async function(params) {
   let url = process.env.API_URL + '/session'
   url += buildQueryString(params)
   const playerData = await fetch(url, {method: 'POST', credentials: 'include'}).then((res) => res.json())
+  cancelReload = true;
   player.set(playerData);
 }
 
@@ -47,9 +56,6 @@ player.fetch = function (playerId) {
   })
 }
 
-if (typeof setInterval !== 'undefined') {
-  setInterval(player.reload, 10000)
-}
 
 function showDialog(props) {
   const dialog = new Dialog({
