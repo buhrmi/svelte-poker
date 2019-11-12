@@ -81,6 +81,7 @@ export async function preload(page, session) {
   let connectedTo = false;
   let wasConnected = false;
   let potObjects = []
+  let chatMsg = ''
   let connectedAs;
   $: {
     // Establishing the connection inside a reactive block makes us automatically reconnect when tableData.id changes. Sapper is pretty cool, indeed.
@@ -345,6 +346,10 @@ export async function preload(page, session) {
       }
     }
 
+    if (message.type == "chat") {
+      displayChatMessage(message.from, message.text)
+    }
+
     // Trigger reactivity
     history = history
     hands=hands
@@ -363,28 +368,48 @@ export async function preload(page, session) {
       }
     })
   }
+
+  let chatMessagesTimeouts = {}
+  function displayChatMessage(playerId, message) {
+    let playerIndex = table.getSeatByPlayerId(playerId)
+    tableState.seats[playerIndex].currentChatMessage = message
+    clearTimeout(chatMessagesTimeouts[playerIndex])
+    let timeout = 3000
+    timeout += message.length * 50;
+    timeout = Math.min(timeout, 6000)
+    chatMessagesTimeouts[playerIndex] = setTimeout(function() {
+      tableState.seats[playerIndex].currentChatMessage = ''
+      }, timeout
+    )
+  }
+
+  function sendChat() {
+    socket.send(JSON.stringify({type: 'chat', text: chatMsg}))
+    chatMsg = '';
+  }
+
   function tip(amount) {
-    socket.send(JSON.stringify({msg: 'tip', amount}))
+    socket.send(JSON.stringify({type: 'tip', amount}))
   }
   function fold() {
-    socket.send(JSON.stringify({msg: 'fold'}))
+    socket.send(JSON.stringify({type: 'fold'}))
   }
   function check() {
-    socket.send(JSON.stringify({msg: 'check'}))
+    socket.send(JSON.stringify({type: 'check'}))
   }
   function call() {
-    socket.send(JSON.stringify({msg: 'call'}))
+    socket.send(JSON.stringify({type: 'call'}))
   }
   function bet(amount) {
-    socket.send(JSON.stringify({msg: 'bet', amount}))
+    socket.send(JSON.stringify({type: 'bet', amount}))
     betSlider = 0;
   }
   function raise(amount) {
-    socket.send(JSON.stringify({msg: 'raise', amount}))
+    socket.send(JSON.stringify({type: 'raise', amount}))
     betSlider = 0;
   }
   async function sitDown(index) {
-    await socket.send(JSON.stringify({msg: "sit-down", seat: index}))
+    await socket.send(JSON.stringify({type: "sit-down", seat: index}))
     const minBringIn = tableData.settings.min_bring_in
     if ($player.balances[tableData.currency].available_balance < minBringIn) {
       showDialog({component: Deposit, title: 'Not enough chips', requiredAmount: minBringIn, options: null})
@@ -396,7 +421,7 @@ export async function preload(page, session) {
 
   }
   async function sitIn() {
-    return await socket.send(JSON.stringify({msg: "sit-in"}))
+    return await socket.send(JSON.stringify({type: "sit-in"}))
   }
   async function bringIn(amount) {
     if (!amount) {
@@ -406,14 +431,14 @@ export async function preload(page, session) {
       })
     }
     else {
-      await socket.send(JSON.stringify({msg: "bring-in", amount}))
+      await socket.send(JSON.stringify({type: "bring-in", amount}))
     }
   }
   function standUp() {
-    socket.send(JSON.stringify({msg: "stand-up"}))
+    socket.send(JSON.stringify({type: "stand-up"}))
   }
   function sitOut() {
-    socket.send(JSON.stringify({msg: "sit-out"}))
+    socket.send(JSON.stringify({type: "sit-out"}))
   }
 
   async function fakeDeposit() {
@@ -425,6 +450,25 @@ export async function preload(page, session) {
     // const json = await res.json()
     player.reload()
 }
+
+// TODO: sticky scrolling should be done somewhere else
+let historyEl;
+let sticky = true
+function stickOrUnstick(e) {
+  sticky = historyEl.scrollTop === (historyEl.scrollHeight - historyEl.offsetHeight)
+}
+
+let interval
+onMount(function() {
+  interval = setInterval(function() {
+    if (sticky) historyEl.scrollTop = historyEl.scrollHeight;
+  }, 100)
+})
+
+onDestroy(function() {
+  clearInterval(interval)
+})
+
 </script>
 
 <style lang="scss">
@@ -492,6 +536,38 @@ button {
     background: #0d0f1a;
   }
 }
+.left {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  .history {
+    height: calc(100% - 33px);
+    overflow-y: auto;
+  }
+  .chatbox {
+    position: absolute;
+    height: 29px;
+    bottom: 0;
+    width: 100%;
+    input {
+      width: calc(100% - 50px);
+      height: 25px;
+      vertical-align: bottom;
+      color: #dde;
+      padding: 4px;
+      font-size: 1.1em;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      
+      outline: none;
+    }
+    button {
+      width: 50px;
+      height: 25px;
+      vertical-align: bottom;
+    }
+  }
+}
 </style>
 
 <svelte:head>
@@ -511,10 +587,15 @@ button {
     {tableData.name} • {#if tableData.ruleset == 'texas'}Texas Hodl'em{/if} • {tableData.currency}
   </div>
 
-  <div slot="left">
-    {#each hands as hand, i (hand.game_number)}
-      <History history={hand}></History>
-    {/each}
+  <div slot="left" class="left">
+    <div class="history" bind:this={historyEl}>
+      {#each hands as hand, i (hand.game_number)}
+        <History history={hand}></History>
+      {/each}
+    </div>
+    <div class="chatbox">
+      <input type="text" disabled={!connectedAs} on:keydown={e => {if (e.keyCode == 13 && connectedAs) sendChat()}} bind:value={chatMsg}><button disabled={!connectedAs} class="btn" on:click={() => sendChat(chatMsg)}>Send</button>
+    </div>
   </div>
 
   {#if connectedTo}

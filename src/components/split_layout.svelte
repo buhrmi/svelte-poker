@@ -34,8 +34,8 @@
     padding: 4px;
   }
   .inner {
+    position: relative;
     height: calc(100% - 34px);
-    overflow-y: auto;
     padding: 4px;
     margin: 4px 4px;
     background: #0d0f1a;
@@ -112,21 +112,7 @@ let leftSideShown = false;
 
 let leftContent = {}
 
-// TODO: sticky scrolling should be done somewhere else
-let sticky = true
-function stickOrUnstick(e) {
-  sticky = leftContent.scrollTop === (leftContent.scrollHeight - leftContent.offsetHeight)
-}
 
-let interval
-onMount(function() {
-  interval = setInterval(function() {
-    if (sticky) leftContent.scrollTop = leftContent.scrollHeight;
-  }, 100)
-})
-onDestroy(function() {
-  clearInterval(interval)
-})
 </script>
 
 
@@ -155,7 +141,7 @@ onDestroy(function() {
   <div class="glossy title">
     <slot name="title"></slot>
   </div>
-  <div bind:this={leftContent} class="inner" on:wheel={stickOrUnstick}>
+  <div class="inner">
     <slot name="left"></slot>
   </div>
 </div>

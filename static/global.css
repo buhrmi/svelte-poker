@@ -114,17 +114,17 @@ a, .link {
 }
 
 .left p.speech:before {
-	left: -16px;
-	bottom: 7px;
+	left: -15px;
+	bottom: 4px;
 	border: 8px solid;
-	border-color: transparent #333 #333 transparent;
+	border-color:  #333  #333 transparent transparent;
 }
 
 .left p.speech:after {
-	left: -10px;
-	bottom: 10px;
+	left: -9px;
+	bottom: 7px;
 	border: 5px solid;
-	border-color: transparent #fff #fff transparent;
+	border-color:  #fff #fff transparent transparent;
 }
 
 .right p.bubble:before,
@@ -136,17 +136,17 @@ a, .link {
 }
 
 .right p.speech:before {
-	right: -16px;
-	bottom: 7px;
+	right: -15px;
+	bottom: 4px;
 	border: 8px solid;
-	border-color: transparent transparent #333  #333;
+	border-color:  #333 transparent transparent #333;
 }
 
 .right p.speech:after {
-	right: -10px;
-	bottom: 10px;
+	right: -9px;
+	bottom: 7px;
 	border: 5px solid;
-	border-color: transparent transparent #fff #fff;
+	border-color:  #fff transparent transparent #fff;
 }
 
 .middle p.speech {
@@ -188,7 +188,7 @@ p.bubble {
 	font-family: sans-serif;
 	padding: 5px;
 	font-size: 14px;
-	z-index: 5;
+	z-index: 11;
 	color: black;
 
 }
