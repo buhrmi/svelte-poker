@@ -11,7 +11,7 @@ let addresses = fetch(process.env.API_URL + '/addresses.json', {credentials: 'in
 export let requiredAmount = 0;
 
 onMount(function() {
-  interval = setInterval(() => player.reload({scan_deposits: true}), 10000)
+  interval = setInterval(() => player.reload({scan_deposits: true}), 30000)
 })
 
 onDestroy(() => {
