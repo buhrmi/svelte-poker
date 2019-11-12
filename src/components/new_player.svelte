@@ -6,7 +6,7 @@ import PlayerSettings from './player_settings.svelte'
 
 <style>
 img {
-  width: 100px;
+  width: 140px;
 }
 p  {
  text-align: center; 
@@ -14,8 +14,8 @@ p  {
 </style>
 
 <p> 
-<img src={$player.profile_pic} alt="profile picture"><br>
+<img src="/baby2.png" alt="babybuhrmi"><br>
 {#if $player.balances.BTC.available_balance}
-You're minding your own business, when suddenly <b>buhrmi</b> shows up.<br> "Here are <b>{$player.balances.BTC.available_balance.toLocaleString()} Chips</b>", he says.
+You're minding your own business, when suddenly <b>buhrmi</b> appears.<br> "Here are <b>{$player.balances.BTC.available_balance.toLocaleString()} Chips</b>", he says.
 {/if}
 </p>
