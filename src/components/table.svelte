@@ -4,7 +4,7 @@
 import {player, showDialog} from '@/shared';
 import { fly, fade, crossfade, scale } from 'svelte/transition';
 import { quintOut, cubicOut } from 'svelte/easing';
-import { createEventDispatcher, tick, onMount } from 'svelte';
+import { createEventDispatcher, tick, onMount, onDestroy } from 'svelte';
 import { vortex } from '@/transitions'
 import Player from './player.svelte'
 import solver from 'pokersolver';
@@ -64,7 +64,6 @@ function deal(node, {rotate = 0, card, seat, duration}) {
 
 export let state;
 export let tableData = {settings:{}};
-
 export let heroIndex = 1;
 export let isShowDown = false;
 let totalPlayerChips;
@@ -112,16 +111,16 @@ export function getSeatByPlayerId(playerId) {
 }
 
 let timerProgress = 0
-
+let timerUpdateInterval
 function updateTimer() {
-  requestAnimationFrame(updateTimer)
   if (!state.actionStarted || !state.actionTimeout) return
   const now = new Date().getTime()
   const start = state.actionStarted;
   const end = state.actionTimeout
   timerProgress = 100 * (now - start) / (end - start)
 }
-onMount(() => requestAnimationFrame(updateTimer))
+onMount(() => timerUpdateInterval = setInterval(updateTimer, 50))
+onDestroy(() => clearInterval(timerUpdateInterval))
 
 // let playersSeatIndex;
 // $: {
@@ -212,7 +211,6 @@ export function playWinningAnimation(pots) {
 export function perform(action) {
   winningSeats = []
   winningPots = []
-
   if (action.action == 'Deal Cards') {
     let seat = getSeatByPlayerId(action.player_id)
     if (typeof seat !== 'number') return
@@ -689,7 +687,6 @@ function doderp(seat, msg, amount) {
 
 
 </style>
-
 <div class="table" style="--playerSize: {playerSize}px" class:callingout={strongestCards && strongestCards.length > 0}>
   <div class="table_data">
     Blinds: {tableData.settings.small_blind_amount}/{tableData.settings.big_blind_amount}

@@ -1,6 +1,6 @@
 <script>
   import { fly } from 'svelte/transition';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   export let seatClass;
   export let seat;
 
@@ -17,15 +17,16 @@
     }
     return {y: 50, x: -20}
   }
-
+  let updateInterval;
   onMount(function() {
-    setInterval(function() {
+    updateInterval = setInterval(function() {
       if (displayedCommited < seat.committed) {
-        displayedCommited += Math.round(seat.committed / 20)
+        displayedCommited += Math.round(seat.committed / 5)
       }
       if (displayedCommited > seat.committed) displayedCommited = seat.committed
-    }, 10)
+    }, 70)
   })
+  onDestroy(() => clearInterval(updateInterval))
   $: {
     if (!seat.chips || seat.committed == 0) seat.chips = [];
   }

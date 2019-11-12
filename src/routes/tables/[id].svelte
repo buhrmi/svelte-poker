@@ -22,7 +22,6 @@ export async function preload(page, session) {
   import { fly, scale } from 'svelte/transition';
 
   let { session, page } = stores();
-
   export let referrerData;
   export let tableData;
   let tableState = {
