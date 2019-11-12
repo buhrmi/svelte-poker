@@ -141,6 +141,10 @@ export async function preload(page, session) {
     margin: 3px 3px;
     padding: 4px 8px;
   }
+  .history {
+    height: 100%;
+    overflow-y: auto;
+  }
 </style>
 
 

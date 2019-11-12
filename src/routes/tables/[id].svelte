@@ -605,7 +605,7 @@ button {
   {#if !tableState.handRunning && gotTableState && playersSittingIn.length < 2 && typeof playerIndex == 'number' && isPlayerSittingIn}
     <div out:scale in:scale={{delay: 1000}} class="invite_box glossy">
       <div class="inner">
-        Searching for worthy opponent...<br>Invite some friends, and they'll receive 1,000 Chips on the House.<br>
+        Searching for worthy opponent...<br>Invite some friends, and they'll receive 1,000 Satoshi on the House.<br>
         <a href="/tables/{tableData.id}?referrer={$player.id}">Invitation Link</a>
       </div>
     </div>
