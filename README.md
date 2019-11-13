@@ -6,6 +6,15 @@ This is only the frontend part of the app. Excuse the overall clumsiness of the 
 
 ## What's new?
 
+2019-11-13
+
+- Introducing: buhrmi, the fortune baby
+- More UI / layout tweaks
+- Hand History download
+
+![](https://i.imgur.com/dJ103ti.png)
+![](https://i.imgur.com/BuocF4m.png)
+
 2019-11-05
 
 - UI work continuing
