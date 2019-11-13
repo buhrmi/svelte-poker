@@ -96,13 +96,13 @@ a, .link {
 
 /* SPEECH BUBBLES */
 .left p.bubble {
-	top: -60px;
-	left: 35px;
+	top: 10px;
+	left: 45px;
 }
 
 .right p.bubble {
-	top: -60px;
-	right: 35px;
+	top: 10px;
+	right: 45px;
 }
 
 .left p.bubble:before,

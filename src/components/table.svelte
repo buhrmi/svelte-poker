@@ -740,7 +740,7 @@ function doderp(seat, msg, amount) {
       {#if state.seats[index]}
         <div class="player" transition:scale>
           {#if state.seats[index].currentChatMessage}
-            <p in:fade="{{ duration: 100 }}" out:fly="{{ y: -8, duration: 650 }}" class="bubble speech">{state.seats[index].currentChatMessage}</p>
+            <p in:fly="{{ y: -8, duration: 350 }}" out:fade="{{duration: 1000 }}" class="bubble speech">{state.seats[index].currentChatMessage}</p>
           {/if}
           {#if state.dealerSeat == index}
             <img class="dealer" in:receive={'dealer'} out:send={'dealer'} src="/button.png" alt="DEALER">
