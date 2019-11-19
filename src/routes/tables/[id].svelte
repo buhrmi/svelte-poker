@@ -595,12 +595,14 @@ button {
 <svelte:head>
   {#if referrerData}
     <title>{tableData.name}</title>
-    <meta property="og:title" content="{referrerData.nick} invites you to {tableData.name}">
-    <meta name="twitter:title" content="{referrerData.nick} invites you to {tableData.name}">
+    <meta property="og:title" content="{referrerData.nick} invites you to join {tableData.name}">
+    <meta name="twitter:title" content="{referrerData.nick} invites you to join {tableData.name}">
   {:else}
     <title>{tableData.name}</title>
-    <meta property="og:title" content="Play Poker for {tableData.currency} on {tableData.name}">
-    <meta name="twitter:title" content="Play Poker for {tableData.currency} on {tableData.name}">
+    <meta property="og:description" content="Play poker for {tableData.currency} on Rock Solid Poker">
+    <meta name="twitter:description" content="Play poker for {tableData.currency} on Rock Solid Poker">
+    <meta property="og:title" content="{tableData.name} - Poker Table">
+    <meta name="twitter:title" content="{tableData.name} - Poker Table">
   {/if}
 </svelte:head>
 
