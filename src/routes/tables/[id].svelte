@@ -15,6 +15,7 @@ export async function preload(page, session) {
   import SplitLayout from '../../components/split_layout.svelte';
   import History from '../../components/history.svelte';
   import BringIn from '../../components/bring_in.svelte'
+  import NewPlayer from '../../components/new_player.svelte'
   import Deposit from '../../components/deposit.svelte'
   import Withdrawals from '../../components/withdrawals.svelte'
   import PlayerSettings from '../../components/player_settings.svelte'
@@ -468,6 +469,16 @@ onMount(function() {
   interval = setInterval(function() {
     if (sticky) historyEl.scrollTop = historyEl.scrollHeight;
   }, 100)
+
+  // show the welcome dialogue
+  player.subscribe(function(player) {
+    if ($player.is_new) {
+      console.log('derp')
+      showDialog({component: NewPlayer, title: `Welcome ${$player.nick}`, currency: tableData.currency, optionCaptions: {OK: 'Thanks'}})
+      console.log('derp2')
+    }
+  })
+
 })
 
 onDestroy(function() {
@@ -670,9 +681,8 @@ button {
   </div>
 </SplitLayout>
   
-  <div class="playerinfo">
-
-    {#if $player.id}
-        <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings', options: []})}>{$player.nick}</span> • <span class="link" on:click={() => showDialog({component: Withdrawals})}>{currencies[tableData.currency].unitname}: {$player.balances[tableData.currency].available_balance.toLocaleString()}</span> • On Tables: {$player.balances[tableData.currency].stacks.toLocaleString()} <button class="btn" on:click={() => showDialog({component: Deposit, currency: tableData.currency, title: 'Deposit ' + currencies[tableData.currency].unitname, options: null})}>Deposit {currencies[tableData.currency].unitname}</button>
-    {/if}
-  </div>
+<div class="playerinfo">
+  {#if $player.id}
+      <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings', options: []})}>{$player.nick}</span> • <span class="link" on:click={() => showDialog({component: Withdrawals})}>{currencies[tableData.currency].unitname}: {$player.balances[tableData.currency].available_balance.toLocaleString()}</span> • On Tables: {$player.balances[tableData.currency].stacks.toLocaleString()} <button class="btn" on:click={() => showDialog({component: Deposit, currency: tableData.currency, title: 'Deposit ' + currencies[tableData.currency].unitname, options: null})}>Deposit {currencies[tableData.currency].unitname}</button>
+  {/if}
+</div>

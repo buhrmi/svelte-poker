@@ -1,8 +1,8 @@
 <script>
 import {player, showDialog, currencies} from '@/shared'
 import PlayerSettings from './player_settings.svelte'
-import {getContext} from 'svelte';
-const tableData = getContext('tableData')
+export let currency;
+console.log('derp4')
 </script>
 
 <style>
@@ -16,7 +16,7 @@ p {
 
 <p> 
 <img src="/baby2.png" alt="babybuhrmi"><br>
-{#if $player.balances[tableData.currency].available_balance}
-You're minding your own business, when suddenly <b>buhrmi</b> appears.<br> "Here are <b>{$player.balances[tableData.currency].available_balance.toLocaleString()} {currencies[tableData.currency].unitname}</b>", he says. Have fun!
+{#if $player.balances[currency].available_balance}
+You're minding your own business, when suddenly <b>buhrmi</b> appears.<br> "Here are <b>{$player.balances[currency].available_balance.toLocaleString()} {currencies[currency].unitname}</b>", he says. Have fun!
 {/if}
 </p>

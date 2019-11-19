@@ -17,16 +17,9 @@ import Deposit from '../components/deposit.svelte';
 import Tables from '../components/tables.svelte';
 import Withdrawals from '../components/withdrawals.svelte';
 
-import {getContext} from 'svelte';
-const tableData = getContext('tableData')
-
 const {page} = stores()
 
 onMount(async function() {
-  player.subscribe(function(player) {
-    if ($player.is_new) showDialog({component: NewPlayer, title: `Welcome ${$player.nick}`, optionCaptions: {OK: 'Thanks'}})
-  })
-
   await player.reload($page.query)
   
   // else showDialog({component: WelcomeBack, title: 'Welcome Back'})
