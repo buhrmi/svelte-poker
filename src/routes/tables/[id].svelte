@@ -16,14 +16,19 @@ export async function preload(page, session) {
   import History from '../../components/history.svelte';
   import BringIn from '../../components/bring_in.svelte'
   import Deposit from '../../components/deposit.svelte'
-  import { onMount, onDestroy, tick } from 'svelte';
-  import {player, showDialog} from '@/shared'
+  import Withdrawals from '../../components/withdrawals.svelte'
+  import PlayerSettings from '../../components/player_settings.svelte'
+  import { onMount, onDestroy, tick, setContext } from 'svelte';
+  import { player, showDialog, currencies } from '@/shared'
   import { stores } from '@sapper/app';
   import { fly, scale } from 'svelte/transition';
 
   let { session, page } = stores();
   export let referrerData;
   export let tableData;
+
+  setContext('tableData', {tableData})
+
   let tableState = {
     settings: tableData.settings,
     seats: Array(tableData.settings.table_size),
@@ -139,15 +144,15 @@ export async function preload(page, session) {
     }
 
     if (message.type == 'bring-in-required') {
-      if ($player.balances.BTC.available_balance + tableState.seats[playerIndex].stack < message.amount) {
-        const depositDialog = showDialog({component: Deposit, title: "Bring in required", requiredAmount: message.amount, text: message.text, options: null})
+      if ($player.balances[tableData.currency].available_balance + tableState.seats[playerIndex].stack < message.amount) {
+        const depositDialog = showDialog({component: Deposit, currency: tableData.currency, title: "Bring in required", requiredAmount: message.amount, text: message.text, options: null})
         depositDialog.$on('OK', async function() {
           await bringIn(message.amount);
           await sitIn();
         })
       }
       else {
-        const bringInDialog = showDialog({component: BringIn, title: "Bring in required", min: message.amount - tableState.seats[playerIndex].stack})
+        const bringInDialog = showDialog({component: BringIn, currency: tableData.currency, title: "Bring in required", min: message.amount - tableState.seats[playerIndex].stack})
         bringInDialog.$on('OK', async function(ev) {
           await bringIn(ev.detail);
           await sitIn();
@@ -412,7 +417,7 @@ export async function preload(page, session) {
     await socket.send(JSON.stringify({type: "sit-down", seat: index}))
     const minBringIn = tableData.settings.min_bring_in
     if ($player.balances[tableData.currency].available_balance < minBringIn) {
-      showDialog({component: Deposit, title: 'Not enough chips', requiredAmount: minBringIn, options: null})
+      showDialog({component: Deposit, currency: tableData.currency, title: 'Not enough chips', requiredAmount: minBringIn, options: null})
     }
     else {
       await bringIn(tableData.settings.min_bring_in || minBringIn);
@@ -425,7 +430,7 @@ export async function preload(page, session) {
   }
   async function bringIn(amount) {
     if (!amount) {
-      const bringInDialog = showDialog({component: BringIn, title: "Bring in"})
+      const bringInDialog = showDialog({component: BringIn, currency: tableData.currency, title: "Bring in"})
       bringInDialog.$on('OK', async function(ev) {
         if (ev.detail) await bringIn(ev.detail);
       })
@@ -568,6 +573,12 @@ button {
     }
   }
 }
+.playerinfo {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  color: white;
+}
 </style>
 
 <svelte:head>
@@ -581,6 +592,7 @@ button {
     <meta name="twitter:title" content="{tableData.name}">
   {/if}
 </svelte:head>
+
 
 <SplitLayout>
   <div slot="title">
@@ -605,7 +617,7 @@ button {
   {#if !tableState.handRunning && gotTableState && playersSittingIn.length < 2 && typeof playerIndex == 'number' && isPlayerSittingIn}
     <div out:scale in:scale={{delay: 1000}} class="invite_box glossy">
       <div class="inner">
-        Waiting for a worthy opponent...<br>Invite some friends, and they'll receive 1,000 Satoshi on the House.<br>
+        Waiting for a worthy opponent...<br>Invite some friends, and they'll receive 1,000 {currencies[tableData.currency].unitname} on the House.<br>
         <a href="/tables/{tableData.id}?referrer={$player.id}">Invitation Link</a>
       </div>
     </div>
@@ -657,3 +669,10 @@ button {
     {/if}
   </div>
 </SplitLayout>
+  
+  <div class="playerinfo">
+
+    {#if $player.id}
+        <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings', options: []})}>{$player.nick}</span> • <span class="link" on:click={() => showDialog({component: Withdrawals})}>{currencies[tableData.currency].unitname}: {$player.balances[tableData.currency].available_balance.toLocaleString()}</span> • On Tables: {$player.balances[tableData.currency].stacks.toLocaleString()} <button class="btn" on:click={() => showDialog({component: Deposit, currency: tableData.currency, title: 'Deposit ' + currencies[tableData.currency].unitname, options: null})}>Deposit {currencies[tableData.currency].unitname}</button>
+    {/if}
+  </div>

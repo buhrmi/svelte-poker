@@ -68,5 +68,15 @@ function showDialog(props) {
   return dialog
 }
 
+const currencies = {
+  BTC: {
+    name: 'bitcoin',
+    unitname: 'Satoshi'
+  },
+  XLM: {
+    name: 'stellar',
+    unitname: 'Lumen'
+  }
+}
 
-export {player, showDialog};
+export {player, showDialog, currencies};

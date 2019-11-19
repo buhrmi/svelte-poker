@@ -17,6 +17,9 @@ import Deposit from '../components/deposit.svelte';
 import Tables from '../components/tables.svelte';
 import Withdrawals from '../components/withdrawals.svelte';
 
+import {getContext} from 'svelte';
+const tableData = getContext('tableData')
+
 const {page} = stores()
 
 onMount(async function() {
@@ -37,12 +40,7 @@ onMount(async function() {
 @mixin narrow {
   @media (max-width: 800px) { @content; }
 }
-.playerinfo {
-  position: absolute;
-  right: 5px;
-  top: 5px;
-  color: white;
-}
+
 .copyright {
   position: absolute;
   bottom: 3px;
@@ -63,12 +61,6 @@ onMount(async function() {
 
   
 <slot></slot>
-
-{#if $player.id}
-  <div class="playerinfo">
-    <span class="link" on:click={() => showDialog({component: PlayerSettings, title: 'Player Settings', options: []})}>{$player.nick}</span> • <span class="link" on:click={() => showDialog({component: Withdrawals})}>Chips: {$player.balances['BTC'].available_balance.toLocaleString()}</span> • On Tables: {$player.balances['BTC'].stacks.toLocaleString()} <button class="btn" on:click={() => showDialog({component: Deposit, title: 'Get more chips', options: null})}>Get more</button>
-  </div>
-{/if}
 
 <div class="copyright">
 Copyright © 2019 <br><a target="_blank" href="https://rocksolid.dev">Rock Solid Development</a>
