@@ -89,9 +89,10 @@ export async function preload(page, session) {
   let potObjects = []
   let chatMsg = ''
   let connectedAs;
+  let connectionString;
   $: {
     // Establishing the connection inside a reactive block makes us automatically reconnect when tableData.id changes. Sapper is pretty cool, indeed.
-    let connectionString = `${process.env.ENGINE_URL}?table_id=${tableData.id}`
+    connectionString = `${process.env.ENGINE_URL}?table_id=${tableData.id}`
     const accessToken = $player.access_token // this is only in dev- or telegram mode
     if (accessToken) connectionString += `&access_token=${accessToken}`
 
