@@ -81,7 +81,13 @@ export async function preload(page, session) {
   }
   $: isPlayersTurn = playerIndex == tableState.activeSeatIndex
   $: isPlayerSittingIn = tableState.seats[playerIndex] && tableState.seats[playerIndex].sitting_in
+  $: canCheck = tableState.seats[playerIndex] && tableState.maxCommitment == tableState.seats[playerIndex].committed
   
+  let autoFold, autoCheck, autoCall;
+  $: {
+    // Reset autoCall if the needed call value is greater than autoCall
+    if (tableState.seats[playerIndex] && tableState.maxCommitment - tableState.seats[playerIndex].committed > autoCall) autoCall = false
+  }
   let socket;
   let connectingTo = false;
   let connectedTo = false;
@@ -168,6 +174,7 @@ export async function preload(page, session) {
       if (!history.rounds) history.rounds = []
       history.rounds.push({street: message.betting_round, actions: tempActions, cards: message.board})
       tempActions = []
+      autoCall = false
       history.rounds = history.rounds
       tableState.board = message.board
       tableState.round = message.betting_round
@@ -192,10 +199,15 @@ export async function preload(page, session) {
     }
 
     if (message.type == 'action-is-on') {
-      tableState.activeSeatIndex = message.seat
-      tableState.actionStarted = new Date().getTime()
       tableState.seats[message.seat].lastAction = null
-      tableState.actionTimeout = tableState.actionStarted + message.timeout
+      if (message.seat == playerIndex && autoCall) call()
+      else if (message.seat == playerIndex && autoCheck && canCheck) check()
+      else if (message.seat == playerIndex && autoFold) fold()
+      else {
+        tableState.activeSeatIndex = message.seat
+        tableState.actionStarted = new Date().getTime()
+        tableState.actionTimeout = tableState.actionStarted + message.timeout
+      }
     }
 
     // It's a table state
@@ -662,12 +674,35 @@ button {
           <input type="range" bind:value={betSlider} min="0" max="1000">
         </div>
       </div>
-      <button class="btn red {isPlayersTurn ? '' : 'disabled'} fold" disabled={!isPlayersTurn} on:click={() => fold()}>Fold</button>
-      {#if tableState.seats[playerIndex] && tableState.maxCommitment == tableState.seats[playerIndex].committed}
-        <button class="btn {isPlayersTurn ? '' : 'disabled'} check" disabled={!isPlayersTurn} on:click={() => check()}>Check</button>
+      {#if isPlayersTurn}
+        <button class="btn red fold" on:click={() => fold()}>Fold</button>
       {:else}
-        <button class="btn {isPlayersTurn ? '' : 'disabled'} call" disabled={!isPlayersTurn} on:click={() => call()}>Call {(tableState.maxCommitment - tableState.seats[playerIndex].committed).toLocaleString()}</button>
+        <button class="btn red {autoFold ? 'disabled': ''} fold" on:click={() => autoFold ^= true}>Auto-Fold {autoFold ? 'is on': ''}</button>
       {/if}
+      {#if canCheck}
+        {#if isPlayersTurn}
+          <button class="btn check" on:click={() => check()}>Check</button>
+        {:else}
+          {#if autoCall}
+            <button class="btn call" on:click={() => autoCall = autoCheck = false}>Auto-Calling {autoCall.toLocaleString()}</button>
+          {:else}
+            <button class="btn check {autoCheck ? 'disabled': ''}" on:click={() => autoCheck ^= true}>Auto-Check {autoCheck ? 'is on': ''}</button>
+          {/if}
+        {/if}
+      {:else}
+        {#if isPlayersTurn}
+          <button class="btn call" on:click={() => call()}>Call {(tableState.maxCommitment - tableState.seats[playerIndex].committed).toLocaleString()}</button>
+        {:else}
+          <button class="btn check {autoCall ? 'disabled': ''}" on:click={() => autoCall = autoCall ? null : (tableState.maxCommitment - tableState.seats[playerIndex].committed)}>
+            {#if autoCall}
+              Auto-Calling {autoCall.toLocaleString()}
+            {:else}
+              Auto-Call {(tableState.maxCommitment - tableState.seats[playerIndex].committed).toLocaleString()}
+            {/if}
+          </button>
+        {/if}
+      {/if}
+      
       
       {#if isPlayersTurn}
         {#if raiseTo >= tableState.seats[playerIndex].stack + tableState.seats[playerIndex].committed}
