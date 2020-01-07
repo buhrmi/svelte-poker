@@ -1,8 +1,6 @@
-# Svelte Poker 
+# Rock Solid Poker 
 
-A poker game written in [Svelte](https://svelte.dev) featuring [Standardized Hand Histories](https://hh-specs.handhistory.org)
-
-This is only the frontend part of the app. Excuse the overall clumsiness of the code. It's going to (probably, maybe) improve over time.
+A poker app made in Svelte. You can try our [test server](https://test.rocksolidpoker.net)
 
 ## What's new?
 
