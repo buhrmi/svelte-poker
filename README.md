@@ -7,9 +7,8 @@ A poker app made in Svelte. You can play it on our [test server](https://test.ro
 2019-11-13
 
 - More UI / layout tweaks
-- Hand History download
+- Download hand histories in [Standardized Hand History Format](http://hh-spec.handhistory.org)
 
-![](https://i.imgur.com/dJ103ti.png)
 ![](https://i.imgur.com/BuocF4m.png)
 
 2019-11-05
