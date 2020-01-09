@@ -1,6 +1,6 @@
 # Rock Solid Poker 
 
-A poker app made in Svelte. You can play it on our [test server](https://test.rocksolidpoker.net)
+A poker app made with [Svelte](http://svelte.dev). You can play it on our [test server](https://test.rocksolidpoker.net)
 
 ## What's new?
 
