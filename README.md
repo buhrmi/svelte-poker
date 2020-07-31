@@ -7,7 +7,7 @@ A poker game made with [Svelte](http://svelte.dev). Here is a [test server](http
 2019-11-13
 
 - More UI / layout tweaks
-- Download hand histories in [Standardized Hand History Format](http://hh-spec.handhistory.org)
+- Download hand histories in [Standardized Hand History Format](http://hh-specs.handhistory.org)
 
 ![](https://i.imgur.com/BuocF4m.png)
 
