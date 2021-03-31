@@ -1,6 +1,6 @@
 # Poker 
 
-A poker game made with [Svelte](http://svelte.dev). Here is a [test server](https://test.rocksolidpoker.net)
+A poker game made with [Svelte](http://svelte.dev). Here is a [test server](https://test.rocksolidpoker.net). It uses a proprietary backend, but unfortunately it never got finsihed.
 
 ## What's new?
 
